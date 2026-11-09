@@ -69,7 +69,7 @@ textarea { min-height: 260px; resize: vertical; font: .86rem/1.5 Consolas, "Casc
 .empty { color: var(--muted); }
 
 /* Dépôt de fichier */
-.drop { border: 2px dashed var(--border-hover); border-radius: 14px; padding: 34px 20px; text-align: center; color: var(--soft); cursor: pointer; background: rgba(255,255,255,.015); }
+.drop { display: block; border: 2px dashed var(--border-hover); border-radius: 14px; padding: 34px 20px; text-align: center; color: var(--soft); cursor: pointer; background: rgba(255,255,255,.015); }
 .drop.over { border-color: var(--gold); background: rgba(255,200,96,.05); }
 .drop strong { color: var(--text); }
 .summary { display: grid; grid-template-columns: 160px 1fr; gap: 6px 14px; font-size: .93rem; margin: 6px 0 0; }
