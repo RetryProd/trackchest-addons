@@ -1,4 +1,8 @@
 {
-  "verified": ["stats-detail", "theme-nuit"],
+  "verified": [
+    "reveil-jeton-pirate",
+    "stats-detail",
+    "theme-nuit"
+  ],
   "revoked": []
 }
