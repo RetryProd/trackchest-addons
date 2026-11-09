@@ -13,7 +13,7 @@
     "permissions": {
       "type": "array",
       "uniqueItems": true,
-      "items": { "enum": ["stats.read", "overlay.rows", "overlay.theme"] }
+      "items": { "enum": ["stats.read", "overlay.rows", "overlay.theme", "overlay.script"] }
     },
     "counters": {
       "type": "array",

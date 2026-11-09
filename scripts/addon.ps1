@@ -2,6 +2,7 @@
 #
 #   .\scripts\addon.ps1 nouveau mon-addon                 crée addons\mon-addon\manifest.json à remplir
 #   .\scripts\addon.ps1 nouveau mon-theme -Type theme     idem, avec un modèle de thème
+#   .\scripts\addon.ps1 nouveau mon-script -Type script   idem, avec un script.js qui peut tout modifier dans l'overlay
 #   .\scripts\addon.ps1 verifier [mon-addon]              contrôle un add-on (ou tous)
 #   .\scripts\addon.ps1 empaqueter mon-addon              crée dist\mon-addon-1.0.0.zip, à essayer dans TrackChest
 #   .\scripts\addon.ps1 publier                           (mainteneur) construit, signe et publie le catalogue
@@ -11,7 +12,7 @@
 param(
     [Parameter(Position = 0)][string]$Commande = 'aide',
     [Parameter(Position = 1)][string]$Id,
-    [ValidateSet('compteur', 'theme')][string]$Type = 'compteur',
+    [ValidateSet('compteur', 'theme', 'script')][string]$Type = 'compteur',
     # Pour « empaqueter » et « publier » : chemin de TrackChest.exe (sinon cherché dans le PATH).
     [string]$Exe,
     # Pour « publier » : clé privée de signature, adresse du site et nom du projet Cloudflare Pages.
@@ -28,7 +29,7 @@ $utf8 = New-Object System.Text.UTF8Encoding($false)
 function Show-Help {
     Write-Output @'
 Commandes :
-  nouveau <id> [-Type compteur|theme]                      crée un add-on à partir d'un modèle
+  nouveau <id> [-Type compteur|theme|script]               crée un add-on à partir d'un modèle
   verifier [<id>]                                            contrôle un add-on (ou tous)
   empaqueter <id> [-Exe chemin\TrackChest.exe]               crée dist\<id>-<version>.zip pour l'essayer
   publier [-Exe ...] [-Cle ...] [-Oui]                       (mainteneur) catalogue : construire, signer, publier
@@ -66,9 +67,47 @@ function Invoke-Exe([string]$exePath, [string[]]$arguments) {
     finally { Remove-Item -LiteralPath $out, $err -ErrorAction SilentlyContinue }
 }
 
+function New-Script {
+@'
+// Script d'add-on TrackChest. Documentation : https://retryprod.gitbook.io/retryprod-docs/add-ons/creer-un-addon
+//
+// overlay(view, data) reçoit l'overlay tel que TrackChest va l'afficher, et tes statistiques.
+// Modifie, ajoute ou supprime ce que tu veux, puis renvoie view.
+//   view : header, total, totalCaption, current, currentCaption, badge,
+//          rows : [{ label, value, detail, color: "#RRGGBB", treasure }]
+//   data : player, inProgress, total, session, matches : [{ start, chests, opened, destroyed, sprites,
+//          cannons, wanted, treasures, placement, eliminations, inSession, chestList, ... }]
+// Bac à sable : pas d'accès aux fichiers ni à Internet ; 1 seconde au maximum par affichage.
+
+function overlay(view, data) {
+  // Exemple : retirer la ligne « Jeton pirate »...
+  view.rows = view.rows.filter(function (row) { return row.label !== "Jeton pirate"; });
+
+  // ...et ajouter le record de coffres en une partie.
+  var record = 0;
+  data.matches.forEach(function (m) { if (m.chests > record) record = m.chests; });
+  view.rows.push({ label: "Record", value: String(record), detail: "· en une partie", color: "#FFC860" });
+
+  return view;
+}
+'@
+}
+
 function New-Manifest([string]$id, [string]$kind) {
     $name = (Get-Culture).TextInfo.ToTitleCase(($id -replace '-', ' '))
-    if ($kind -eq 'theme') {
+    if ($kind -eq 'script') {
+@"
+{
+  "schema": 1,
+  "id": "$id",
+  "name": "$name",
+  "version": "1.0.0",
+  "description": "Décris ce que fait ton script en une phrase.",
+  "permissions": ["stats.read", "overlay.script"]
+}
+"@
+    }
+    elseif ($kind -eq 'theme') {
 @"
 {
   "schema": 1,
@@ -115,6 +154,10 @@ switch ($Commande.ToLowerInvariant()) {
         New-Item -ItemType Directory -Path $folder | Out-Null
         [System.IO.File]::WriteAllText((Join-Path $folder 'manifest.json'), (New-Manifest $Id $Type), $utf8)
         Write-Output "Créé : addons\$Id\manifest.json"
+        if ($Type -eq 'script') {
+            [System.IO.File]::WriteAllText((Join-Path $folder 'script.js'), (New-Script), $utf8)
+            Write-Output "Créé : addons\$Id\script.js"
+        }
         Write-Output ''
         Write-Output '1. Ouvre ce fichier, change name, description et le contenu (référence : https://trackchest-addons.pages.dev/).'
         Write-Output "2. .\scripts\addon.ps1 verifier $Id"
@@ -138,7 +181,11 @@ switch ($Commande.ToLowerInvariant()) {
         New-Item -ItemType Directory -Force $dist | Out-Null
         $zip = Join-Path $dist "$($manifest.id)-$($manifest.version).zip"
         if (Test-Path -LiteralPath $zip) { Remove-Item -LiteralPath $zip }
-        Compress-Archive -LiteralPath $manifestPath -DestinationPath $zip   # exactement un fichier : manifest.json
+        # manifest.json, plus script.js pour un add-on à script : rien d'autre.
+        $files = @($manifestPath)
+        $scriptPath = Join-Path $root "addons\$Id\script.js"
+        if (Test-Path -LiteralPath $scriptPath) { $files += $scriptPath }
+        Compress-Archive -LiteralPath $files -DestinationPath $zip
         Write-Output "Paquet : $zip"
         $exePath = Find-Exe
         if ($exePath) {

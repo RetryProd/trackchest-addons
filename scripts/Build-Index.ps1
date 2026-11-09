@@ -38,7 +38,11 @@ foreach ($folder in Get-ChildItem -LiteralPath (Join-Path $root 'addons') -Direc
     $manifestPath = Join-Path $folder.FullName 'manifest.json'
     $m = [System.IO.File]::ReadAllText($manifestPath) | ConvertFrom-Json
     $zip = Join-Path $site "$($m.id)-$($m.version).zip"
-    Compress-Archive -LiteralPath $manifestPath -DestinationPath $zip   # exactement un fichier : manifest.json
+    # manifest.json, plus script.js pour un add-on à script : rien d'autre.
+    $files = @($manifestPath)
+    $scriptPath = Join-Path $folder.FullName 'script.js'
+    if (Test-Path -LiteralPath $scriptPath) { $files += $scriptPath }
+    Compress-Archive -LiteralPath $files -DestinationPath $zip
     $info = Get-Item -LiteralPath $zip
     $entries.Add([ordered]@{
         id          = [string]$m.id

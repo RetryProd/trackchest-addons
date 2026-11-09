@@ -5,7 +5,7 @@ param([string]$Id)
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
-$allPermissions = 'stats.read', 'overlay.rows', 'overlay.theme'
+$allPermissions = 'stats.read', 'overlay.rows', 'overlay.theme', 'overlay.script'
 $metrics = 'chests', 'opened', 'destroyed', 'sprites', 'wanted', 'cannons', 'treasures', 'matches'
 $scopes = 'total', 'last', 'session'
 $manifestKeys = 'schema', 'id', 'name', 'version', 'description', 'permissions', 'counters', 'theme'
@@ -23,8 +23,8 @@ function Get-Errors([string]$folder) {
     $file = Join-Path $folder 'manifest.json'
     if (-not (Test-Path -LiteralPath $file)) { $errors.Add('manifest.json absent.'); return $errors }
 
-    # Un dossier d'add-on ne contient que le manifeste (et un README pour les humains) : jamais de code.
-    foreach ($other in Get-ChildItem -LiteralPath $folder -Force | Where-Object { $_.Name -notin 'manifest.json', 'README.md' }) {
+    # Un dossier d'add-on contient le manifeste, script.js pour un add-on à script, et un README pour les humains.
+    foreach ($other in Get-ChildItem -LiteralPath $folder -Force | Where-Object { $_.Name -notin 'manifest.json', 'README.md', 'script.js' }) {
         $errors.Add("fichier interdit : $($other.Name)")
     }
 
@@ -60,8 +60,22 @@ function Get-Errors([string]$folder) {
     if ($counters.Count -gt 0 -and -not (($permissions -ccontains 'stats.read') -and ($permissions -ccontains 'overlay.rows'))) {
         $errors.Add('les compteurs demandent stats.read et overlay.rows.')
     }
-    if ($counters.Count -eq 0 -and (($permissions -ccontains 'stats.read') -or ($permissions -ccontains 'overlay.rows'))) {
-        $errors.Add('permissions de compteur sans compteur.')
+    $script = $permissions -ccontains 'overlay.script'
+    if ($counters.Count -eq 0 -and $permissions -ccontains 'overlay.rows') { $errors.Add('permission overlay.rows sans compteur.') }
+    if ($counters.Count -eq 0 -and -not $script -and $permissions -ccontains 'stats.read') { $errors.Add('permission stats.read sans compteur ni script.') }
+
+    # Script : script.js (32 Ko maximum, UTF-8 sans BOM), avec les permissions overlay.script et stats.read.
+    # Sa syntaxe et sa fonction overlay() sont contrôlées par TrackChest (addon.ps1 empaqueter -Exe, ou --addon-check).
+    $scriptFile = Join-Path $folder 'script.js'
+    $hasFile = Test-Path -LiteralPath $scriptFile
+    if ($script -and -not $hasFile) { $errors.Add('la permission overlay.script demande un fichier script.js.') }
+    if ($hasFile -and -not $script) { $errors.Add('script.js demande la permission overlay.script.') }
+    if ($script -and $permissions -cnotcontains 'stats.read') { $errors.Add('le script demande aussi la permission stats.read.') }
+    if ($hasFile) {
+        $code = [System.IO.File]::ReadAllBytes($scriptFile)
+        if ($code.Length -gt 32768) { $errors.Add('script.js dépasse 32 Ko.') }
+        if ($code.Length -ge 3 -and $code[0] -eq 0xEF -and $code[1] -eq 0xBB -and $code[2] -eq 0xBF) { $errors.Add('script.js ne doit pas avoir de BOM.') }
+        if ([System.Text.Encoding]::UTF8.GetString($code) -notmatch '\boverlay\b') { $errors.Add('script.js doit définir une fonction overlay(view, data).') }
     }
 
     if ($null -ne $m.theme) {
@@ -74,7 +88,7 @@ function Get-Errors([string]$folder) {
         }
     }
     elseif ($permissions -ccontains 'overlay.theme') { $errors.Add('permission overlay.theme sans thème.') }
-    if ($counters.Count -eq 0 -and $null -eq $m.theme) { $errors.Add('ni compteur ni thème.') }
+    if ($counters.Count -eq 0 -and $null -eq $m.theme -and -not $script) { $errors.Add('ni compteur, ni thème, ni script.') }
     return $errors
 }
 

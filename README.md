@@ -5,19 +5,23 @@ Copie-le dans un nouveau dépôt GitHub public (par exemple `trackchest-addons`)
 
 ## Ce qu'est un add-on
 
-Un add-on est **un fichier de données, jamais du code** : un `manifest.json` qui déclare
+Un add-on est un dossier `addons/<id>/` avec un `manifest.json` qui déclare
 
 - des **compteurs** pour l'overlay (une ligne avec une statistique : coffres cassés, canons à butin, cartes Wanted…) ;
-- et/ou un **thème** (les couleurs de l'overlay).
+- et/ou un **thème** (les couleurs de l'overlay) ;
+- et/ou un **script** : un fichier `script.js` dont la fonction `overlay(view, data)` peut modifier, ajouter ou
+  supprimer tout ce qu'affiche l'overlay.
 
-TrackChest lit et valide lui-même ce fichier. Un add-on ne peut donc ni exécuter un programme, ni lire des fichiers, ni
-utiliser Internet. Il ne peut utiliser que ce qu'il déclare dans `permissions` :
+TrackChest lit et valide lui-même ces fichiers. Les scripts tournent dans un bac à sable : ils ne peuvent ni exécuter
+un programme, ni lire des fichiers, ni utiliser Internet. Un add-on ne peut utiliser que ce qu'il déclare dans
+`permissions` :
 
 | Permission | Ce qu'elle permet |
 |---|---|
-| `stats.read` | lire les statistiques (coffres, parties, trésors) pour calculer un compteur |
+| `stats.read` | lire les statistiques (coffres, parties, trésors) pour un compteur ou un script |
 | `overlay.rows` | ajouter des lignes à l'overlay |
 | `overlay.theme` | changer les couleurs de l'overlay |
+| `overlay.script` | exécuter `script.js`, qui peut tout changer dans l'overlay |
 
 Les valeurs possibles sont fixées par TrackChest : `metric` = `chests`, `opened`, `destroyed`, `sprites`, `wanted`,
 `cannons`, `treasures`, `matches` ; `scope` = `total`, `session`, `last`. Regarde `addons/stats-detail` et
@@ -114,6 +118,10 @@ un `README.md`. Ensuite, ouvrir une pull request.
 - [ ] Les permissions correspondent à ce que l'add-on fait vraiment (les contrôles l'imposent déjà).
 - [ ] L'`id` n'imite pas un autre add-on ou un nom de marque.
 - [ ] Pour un thème : les couleurs restent lisibles (texte clair sur fond sombre ou l'inverse).
+- [ ] Pour un script : lis **tout** `script.js`. Il ne doit afficher que des informations vraies, ne rien cacher
+      d'important de façon trompeuse, et rester lisible (pas de code obfusqué ou minifié : refuse-le). Teste-le avec
+      `.\scripts\addon.ps1 empaqueter <id> -Exe ...TrackChest.exe` puis dans TrackChest. Le contrôle automatique
+      GitHub ne compile pas le script : c'est cette étape qui le fait.
 - [ ] Seulement après tout cela, ajoute l'`id` à `registry.json` → `verified`.
 
 ## Limites

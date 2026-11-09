@@ -52,13 +52,15 @@
   .errors:empty { display: none; }
   .ok { color: var(--soft); font-size: .9rem; margin-top: 10px; }
   .hidden { display: none !important; }
+  .gen textarea { width: 100%; min-height: 260px; resize: vertical; background: #0a0c11; color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 12px; font: .86rem/1.5 Consolas, "Cascadia Mono", monospace; tab-size: 2; }
+  .gen textarea:focus { outline: 2px solid rgba(255,200,96,.45); border-color: transparent; }
   @media (max-width: 640px) { .grid2, .grid3, .grid-meta { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
 <main>
   <h1>Créer un add-on TrackChest</h1>
-  <p class="lead">Un add-on ajoute des <strong>compteurs</strong> et/ou un <strong>thème</strong> à l'overlay de TrackChest. C'est un fichier de données, jamais du code : il n'y a rien à programmer, juste un fichier JSON à remplir. Le guide complet est dans la <a href="https://retryprod.gitbook.io/retryprod-docs/add-ons/creer-un-addon" target="_blank" rel="noopener">documentation</a>.</p>
+  <p class="lead">Un add-on change l'overlay de TrackChest : des <strong>compteurs</strong> et un <strong>thème</strong> (un fichier JSON à remplir, rien à programmer), ou un <strong>script</strong> JavaScript qui peut tout modifier, ajouter ou supprimer. Le guide complet est dans la <a href="https://retryprod.gitbook.io/retryprod-docs/add-ons/creer-un-addon" target="_blank" rel="noopener">documentation</a>.</p>
 
   <div class="note">TrackChest valide lui-même chaque add-on. Un add-on ne peut ni lancer un programme, ni lire des fichiers, ni utiliser Internet : il ne peut faire que ce qu'il déclare dans ses <code>permissions</code>, que le joueur voit avant d'installer.</div>
 
@@ -69,6 +71,7 @@
     <div class="checks">
       <label><input type="checkbox" id="useCounters" checked> Ajouter des compteurs</label>
       <label><input type="checkbox" id="useTheme"> Ajouter un thème</label>
+      <label><input type="checkbox" id="useScript"> Ajouter un script (tout modifier)</label>
     </div>
 
     <div class="grid-meta">
@@ -90,6 +93,23 @@
       <div class="grid-theme" id="themeFields"></div>
     </div>
 
+    <div id="scriptBox" class="hidden">
+      <h3>script.js</h3>
+      <p class="lead" style="margin-top:0">La fonction <code>overlay(view, data)</code> reçoit l'overlay et tes statistiques : modifie, ajoute ou supprime ce que tu veux, puis renvoie <code>view</code>. Le script tourne dans un bac à sable (pas d'accès aux fichiers ni à Internet). Référence complète : <a href="https://retryprod.gitbook.io/retryprod-docs/add-ons/creer-un-addon" target="_blank" rel="noopener">documentation</a>.</p>
+      <textarea id="f-script" spellcheck="false" rows="18" aria-label="Contenu de script.js">// Retire la ligne « Jeton pirate » et ajoute le record de coffres en une partie.
+function overlay(view, data) {
+  view.rows = view.rows.filter(function (row) { return row.label !== "Jeton pirate"; });
+
+  var record = 0;
+  data.matches.forEach(function (m) { if (m.chests > record) record = m.chests; });
+  view.rows.push({ label: "Record", value: String(record), detail: "· en une partie", color: "#FFC860" });
+
+  return view;
+}
+</textarea>
+      <p class="lead" id="scriptHelp">Un add-on à script contient deux fichiers. Pour le proposer : télécharge <code>manifest.json</code> et <code>script.js</code>, puis clique sur <strong>Proposer sur GitHub</strong> et glisse les deux fichiers sur la page d'envoi.</p>
+    </div>
+
     <h3>manifest.json</h3>
     <pre><code id="out"></code></pre>
     <ul class="errors" id="errors"></ul>
@@ -99,6 +119,7 @@
       <a class="btn primary" id="btnGithub" href="#" target="_blank" rel="noopener" aria-disabled="true">Proposer sur GitHub</a>
       <button type="button" class="btn" id="btnCopy" disabled>Copier le JSON</button>
       <button type="button" class="btn" id="btnDownload" disabled>Télécharger manifest.json</button>
+      <button type="button" class="btn hidden" id="btnDownloadScript" disabled>Télécharger script.js</button>
     </div>
   </div>
 
@@ -171,9 +192,10 @@
   function build() {
     var m = { schema: 1, id: $('f-id').value.trim(), name: $('f-name').value.trim(), version: $('f-version').value.trim(),
               description: $('f-desc').value.trim(), permissions: [] };
-    var useCounters = $('useCounters').checked, useTheme = $('useTheme').checked;
+    var useCounters = $('useCounters').checked, useTheme = $('useTheme').checked, useScript = $('useScript').checked;
     if (useCounters) { m.permissions.push('stats.read', 'overlay.rows'); m.counters = []; }
     if (useTheme) m.permissions.push('overlay.theme');
+    if (useScript) { if (m.permissions.indexOf('stats.read') < 0) m.permissions.unshift('stats.read'); m.permissions.push('overlay.script'); }
     if (useCounters) Array.prototype.forEach.call(counterRows.children, function (r) { m.counters.push(r._get()); });
     if (useTheme) {
       m.theme = {};
@@ -192,7 +214,14 @@
     if (!text(m.name, 1, 40)) e.push('Nom : 1 à 40 caractères.');
     if (!/^\d{1,4}\.\d{1,4}\.\d{1,4}$/.test(m.version)) e.push('Version : format 1.0.0.');
     if (!text(m.description, 0, 200)) e.push('Description : 200 caractères maximum.');
-    if (!m.counters && !m.theme) e.push('Choisis au moins des compteurs ou un thème.');
+    var hasScript = m.permissions.indexOf('overlay.script') >= 0;
+    if (!m.counters && !m.theme && !hasScript) e.push('Choisis au moins des compteurs, un thème ou un script.');
+    if (hasScript) {
+      var code = $('f-script').value;
+      if (!code.trim()) e.push('Script : écris le contenu de script.js.');
+      else if (new Blob([code]).size > 32768) e.push('Script : 32 Ko au maximum.');
+      else if (!/\boverlay\b/.test(code)) e.push('Script : script.js doit définir une fonction overlay(view, data).');
+    }
     if (m.counters) {
       if (m.counters.length === 0) e.push('Ajoute au moins un compteur (ou décoche « Ajouter des compteurs »).');
       if (m.counters.length > 8) e.push('8 compteurs au maximum.');
@@ -206,6 +235,9 @@
   function refresh() {
     $('countersBox').classList.toggle('hidden', !$('useCounters').checked);
     $('themeBox').classList.toggle('hidden', !$('useTheme').checked);
+    var withScript = $('useScript').checked;
+    $('scriptBox').classList.toggle('hidden', !withScript);
+    $('btnDownloadScript').classList.toggle('hidden', !withScript);
     var m = build();
     var json = JSON.stringify(m, null, 2) + '\n';
     var errors = validate(m);
@@ -218,7 +250,10 @@
     $('okMsg').textContent = valid ? 'Manifeste valide. Tu peux le proposer ou le télécharger.' : (touched ? '' : 'Remplis les champs ci-dessus : le fichier se vérifie en direct.');
     var gh = $('btnGithub');
     if (valid && REPO) {
-      gh.href = REPO + '/new/main?filename=' + encodeURIComponent('addons/' + m.id + '/manifest.json') + '&value=' + encodeURIComponent(json);
+      // One file: GitHub page with the file already filled in. With a script (two files): GitHub upload page.
+      gh.href = withScript
+        ? REPO + '/upload/main/addons/' + encodeURIComponent(m.id)
+        : REPO + '/new/main?filename=' + encodeURIComponent('addons/' + m.id + '/manifest.json') + '&value=' + encodeURIComponent(json);
       gh.setAttribute('aria-disabled', 'false');
     } else {
       gh.href = '#';
@@ -227,6 +262,13 @@
     if (!REPO) { gh.classList.add('hidden'); }
     $('btnCopy').disabled = !valid;
     $('btnDownload').disabled = !valid;
+    $('btnDownloadScript').disabled = !valid;
+  }
+
+  function download(name, content, type) {
+    var url = URL.createObjectURL(new Blob([content], { type: type }));
+    var a = el('a', { href: url, download: name });
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
   }
 
   $('btnGithub').addEventListener('click', function (ev) { if (this.getAttribute('aria-disabled') === 'true') ev.preventDefault(); });
@@ -236,17 +278,17 @@
     if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(current.json).then(done);
     else { var ta = el('textarea'); ta.value = current.json; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); done(); }
   });
-  $('btnDownload').addEventListener('click', function () {
+  $('btnDownload').addEventListener('click', function () { if (current) download('manifest.json', current.json, 'application/json'); });
+  $('btnDownloadScript').addEventListener('click', function () {
     if (!current) return;
-    var url = URL.createObjectURL(new Blob([current.json], { type: 'application/json' }));
-    var a = el('a', { href: url, download: 'manifest.json' });
-    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    var code = $('f-script').value.replace(/\r\n/g, '\n');
+    download('script.js', code.endsWith('\n') ? code : code + '\n', 'text/javascript');
   });
   $('addCounter').addEventListener('click', function () {
     if (counterRows.children.length < 8) addCounter();
     touched = true; refresh();
   });
-  ['f-id', 'f-name', 'f-version', 'f-desc', 'useCounters', 'useTheme'].forEach(function (id) {
+  ['f-id', 'f-name', 'f-version', 'f-desc', 'useCounters', 'useTheme', 'useScript', 'f-script'].forEach(function (id) {
     $(id).addEventListener('input', function () { touched = true; refresh(); });
     $(id).addEventListener('change', function () { touched = true; refresh(); });
   });
