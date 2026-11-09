@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Poster un add-on TrackChest</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <header class="top">
+    <a class="brand" href="./">TrackChest <span>Add-ons</span></a>
+    <nav class="nav">
+      <a class="btn" href="./">Catalogue</a>
+      <a class="btn" href="creer.html">Créer un add-on</a>
+      <a class="btn primary active" href="poster.html">Poster un add-on</a>
+    </nav>
+  </header>
+
+  <h1>Poster un add-on</h1>
+  <p class="lead">Envoie le <code>.zip</code> de ton add-on : <code>manifest.json</code>, et <code>script.js</code> pour un add-on à script. Pas besoin de compte. Le site vérifie le fichier, puis le mainteneur le relit avant de l'ajouter au catalogue. Pour fabriquer le <code>.zip</code>, utilise <a href="creer.html">Créer un add-on</a> ou la commande <code>addon.ps1 empaqueter</code>.</p>
+
+  <div class="card">
+    <label class="drop" id="drop" for="file">
+      <strong>Glisse ton .zip ici</strong><br>ou clique pour le choisir (64 Ko maximum)
+    </label>
+    <input type="file" id="file" accept=".zip,application/zip" class="hidden">
+
+    <div id="result" class="hidden">
+      <h3 id="resultTitle"></h3>
+      <dl class="summary" id="summary"></dl>
+      <ul class="errors" id="errors"></ul>
+    </div>
+
+    <div class="trap" aria-hidden="true"><label>Ne pas remplir <input type="text" id="site_web" tabindex="-1" autocomplete="off"></label></div>
+
+    <div class="actions">
+      <button type="button" class="btn primary" id="send" disabled>Poster l'add-on</button>
+      <button type="button" class="btn hidden" id="reset">Choisir un autre fichier</button>
+    </div>
+    <p class="ok" id="status"></p>
+  </div>
+
+  <div class="note">En postant, tu acceptes que ton add-on soit publié dans le catalogue public s'il est accepté. Ne mets ni lien, ni information personnelle, ni contenu choquant : la proposition serait refusée.</div>
+</main>
+
+<script type="module">
+  import { readAddonZip, PERMISSION_TEXT } from './addon-rules.js';
+
+  const $ = (id) => document.getElementById(id);
+  let current = null;
+
+  function el(tag, attrs = {}, children = []) {
+    const e = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) { if (k === 'text') e.textContent = v; else e.setAttribute(k, v); }
+    children.forEach((c) => e.appendChild(c));
+    return e;
+  }
+
+  function show(title, rows, errors) {
+    $('result').classList.remove('hidden');
+    $('resultTitle').textContent = title;
+    $('summary').textContent = '';
+    rows.forEach(([k, v]) => { $('summary').appendChild(el('dt', { text: k })); $('summary').appendChild(el('dd', { text: v })); });
+    $('errors').textContent = '';
+    errors.forEach((msg) => $('errors').appendChild(el('li', { text: msg })));
+  }
+
+  async function choose(file) {
+    current = null;
+    $('send').disabled = true;
+    $('status').textContent = '';
+    $('status').className = 'ok';
+    $('reset').classList.remove('hidden');
+    if (!file) return;
+    if (file.size > 64 * 1024) { show('Fichier refusé', [['Fichier', file.name]], ['Le .zip fait plus de 64 Ko.']); return; }
+    const addon = await readAddonZip(await file.arrayBuffer());
+    const m = addon.manifest;
+    const rows = [['Fichier', `${file.name} (${(file.size / 1024).toFixed(1).replace('.', ',')} Ko)`]];
+    if (m && typeof m === 'object') {
+      rows.push(['Add-on', `${m.name ?? '?'} (${m.id ?? '?'}) ${m.version ?? ''}`]);
+      if (m.description) rows.push(['Description', m.description]);
+      if (Array.isArray(m.permissions)) rows.push(['Permissions', m.permissions.map((p) => PERMISSION_TEXT[p] || p).join(' · ') || '—']);
+      rows.push(['Contenu', addon.script !== null && addon.script !== undefined ? 'manifest.json + script.js' : 'manifest.json']);
+    }
+    if (addon.errors.length > 0) { show('Cet add-on ne peut pas être posté', rows, addon.errors); return; }
+    show('Add-on valide', rows, []);
+    current = file;
+    $('send').disabled = false;
+  }
+
+  $('file').addEventListener('change', (e) => choose(e.target.files[0]));
+  const drop = $('drop');
+  ['dragenter', 'dragover'].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.remove('over'); }));
+  drop.addEventListener('drop', (e) => choose(e.dataTransfer.files[0]));
+  $('reset').addEventListener('click', () => { $('file').value = ''; $('file').click(); });
+
+  $('send').addEventListener('click', async () => {
+    if (!current) return;
+    $('send').disabled = true;
+    $('status').className = 'ok';
+    $('status').textContent = 'Envoi en cours…';
+    const form = new FormData();
+    form.append('zip', current, current.name);
+    form.append('site_web', $('site_web').value);
+    try {
+      const response = await fetch('api/proposer', { method: 'POST', body: form });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        $('status').textContent = data.error || 'L’envoi a échoué.';
+        if (data.details) show('Cet add-on ne peut pas être posté', [], data.details);
+        $('send').disabled = false;
+        return;
+      }
+      $('status').className = 'ok success';
+      $('status').textContent = '';
+      $('status').append('Merci ! Ta proposition est envoyée. Le mainteneur va la relire. ',
+        el('a', { href: data.url, target: '_blank', rel: 'noopener', text: 'Voir la proposition' }));
+      current = null;
+    } catch {
+      $('status').textContent = 'Impossible de joindre le site. Vérifie ta connexion et réessaie.';
+      $('send').disabled = false;
+    }
+  });
+</script>
+</body>
+</html>

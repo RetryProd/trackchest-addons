@@ -8,7 +8,7 @@
 #   .\scripts\addon.ps1 publier                           (mainteneur) construit, signe et publie le catalogue
 #   .\scripts\addon.ps1 aide
 #
-# Pour proposer un add-on aux autres joueurs : https://trackchest-addons.pages.dev/ (bouton « Proposer sur GitHub »).
+# Pour proposer un add-on aux autres joueurs : https://trackchest-addons.pages.dev/poster.html (envoi du .zip, sans compte).
 param(
     [Parameter(Position = 0)][string]$Commande = 'aide',
     [Parameter(Position = 1)][string]$Id,
@@ -35,7 +35,7 @@ Commandes :
   publier [-Exe ...] [-Cle ...] [-Oui]                       (mainteneur) catalogue : construire, signer, publier
 
 Pour essayer un add-on : empaqueter, puis dans TrackChest : Add-on > Ajouter un fichier...
-Pour le proposer aux autres joueurs : https://trackchest-addons.pages.dev/ (bouton « Proposer sur GitHub »).
+Pour le proposer aux autres joueurs : https://trackchest-addons.pages.dev/poster.html (envoi du .zip, sans compte).
 '@
 }
 
@@ -159,10 +159,10 @@ switch ($Commande.ToLowerInvariant()) {
             Write-Output "Créé : addons\$Id\script.js"
         }
         Write-Output ''
-        Write-Output '1. Ouvre ce fichier, change name, description et le contenu (référence : https://trackchest-addons.pages.dev/).'
+        Write-Output '1. Ouvre ce fichier, change name, description et le contenu (guide : https://retryprod.gitbook.io/retryprod-docs/add-ons/creer-un-addon).'
         Write-Output "2. .\scripts\addon.ps1 verifier $Id"
         Write-Output "3. .\scripts\addon.ps1 empaqueter $Id   puis TrackChest : Add-on > Ajouter un fichier..."
-        Write-Output '4. Pour le proposer aux autres joueurs : https://trackchest-addons.pages.dev/ (bouton « Proposer sur GitHub »).'
+        Write-Output "4. Pour le proposer aux autres joueurs : envoie le .zip sur https://trackchest-addons.pages.dev/poster.html (sans compte)."
     }
     'verifier' {
         $parametres = @{}

@@ -96,9 +96,14 @@ Pour changer un add-on déjà publié, **augmente sa `version`** (sinon les joue
 
 ## Proposer un add-on (créateurs)
 
-Le point d'entrée est le site du catalogue (<https://trackchest-addons.pages.dev/>) : son **générateur** construit et
-vérifie le `manifest.json`, puis le bouton **Proposer sur GitHub** ouvre une page GitHub avec le fichier prérempli.
-GitHub propose de copier le dépôt (« fork ») et d'ouvrir la pull request.
+Le point d'entrée est le site du catalogue (<https://trackchest-addons.pages.dev/>), **sans compte** :
+
+- **Créer un add-on** (`creer.html`) construit et vérifie l'add-on, puis le télécharge en `.zip` ou le poste ;
+- **Poster un add-on** (`poster.html`) reçoit un `.zip` fait ailleurs (par exemple avec `addon.ps1 empaqueter`).
+
+Le site vérifie le `.zip`, puis la fonction `functions/api/proposer.js` crée elle-même la proposition (pull request) sur
+ce dépôt, avec le jeton GitHub du site (voir [Envoi sans compte](#envoi-sans-compte-configuration)). Le créateur reçoit
+le lien de sa proposition.
 
 Pour travailler sur son PC, la commande `addon.ps1` fait le reste :
 
@@ -108,8 +113,33 @@ Pour travailler sur son PC, la commande `addon.ps1` fait le reste :
 .\scripts\addon.ps1 empaqueter mon-addon   # crée dist\mon-addon-1.0.0.zip, à essayer dans TrackChest
 ```
 
-Le nom du dossier est égal à `id`, et le dossier ne contient que `manifest.json` (UTF-8 **sans BOM**), éventuellement
-un `README.md`. Ensuite, ouvrir une pull request.
+Le nom du dossier est égal à `id`, et le dossier ne contient que `manifest.json` (UTF-8 **sans BOM**), `script.js`
+pour un add-on à script, éventuellement un `README.md`. Ensuite, poster le `.zip` sur le site (ou ouvrir une pull
+request soi-même, pour qui a un compte GitHub).
+
+## Envoi sans compte (configuration)
+
+La fonction `functions/api/proposer.js` est publiée avec le site par `wrangler pages deploy` (elle tourne sur
+Cloudflare, gratuitement). Elle a besoin d'un **jeton GitHub**, que toi seul crées et donnes à Cloudflare :
+
+1. Sur GitHub : **Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token**.
+   - **Repository access** : *Only select repositories* → `trackchest-addons` uniquement.
+   - **Permissions** : *Contents* → **Read and write** ; *Pull requests* → **Read and write**. Rien d'autre.
+   - Une date d'expiration (par exemple un an) : il faudra le renouveler.
+2. Donne-le à Cloudflare (la commande te demande de le coller, il n'apparaît nulle part ailleurs) :
+
+   ```powershell
+   npx wrangler pages secret put GITHUB_TOKEN --project-name trackchest-addons
+   ```
+
+3. Republie le site (`.\scripts\addon.ps1 publier ...`) : la page **Poster** fonctionne.
+
+Tant que le jeton n'est pas configuré, la page répond « L'envoi d'add-ons n'est pas encore configuré ».
+
+**Protection** : le `.zip` est vérifié avant tout envoi (64 Ko maximum, mêmes règles que TrackChest), les envois venant
+d'un autre site sont refusés et un champ piège écarte les robots simples. Toute proposition reste une pull request :
+rien n'est publié sans ta relecture. Si le site reçoit trop de propositions indésirables, on peut ajouter Cloudflare
+Turnstile (anti-robot gratuit). Si le jeton fuit, révoque-le sur GitHub et crées-en un autre.
 
 ## Checklist de relecture (mainteneur)
 
@@ -126,20 +156,27 @@ un `README.md`. Ensuite, ouvrir une pull request.
 
 ## Limites
 
-Aucun système n'offre une sécurité absolue. Ici le risque est réduit par construction (pas de code), la signature et
-les empreintes protègent le transport et l'hébergement, et la relecture protège contre le contenu trompeur. Un add-on
-malveillant ne peut au pire qu'afficher des chiffres ou des couleurs trompeurs, et la révocation permet de le retirer.
+Aucun système n'offre une sécurité absolue. Ici le risque est réduit par construction (compteurs et thèmes sans code,
+scripts dans un bac à sable sans accès au PC), la signature et les empreintes protègent le transport et l'hébergement,
+et la relecture protège contre le contenu trompeur. Un add-on malveillant ne peut au pire qu'afficher des chiffres ou
+des couleurs trompeurs dans l'overlay, et la révocation permet de le retirer.
 
 ## Guide pour les développeurs d'add-ons
 
-Le **générateur de manifeste** est la page `site-src/index.html`. `Build-Index.ps1` la publie à la racine du site, avec
-le schéma `addon.schema.json` pour l'autocomplétion dans VS Code. Le bouton **Créer un add-on** de la fenêtre Add-on de
-TrackChest ouvre cette page. Le guide complet (champs, permissions, compteurs, thème, exemples) est dans la
-documentation : <https://retryprod.gitbook.io/retryprod-docs/add-ons/creer-un-addon>.
+Le site est dans `site-src/` et `Build-Index.ps1` copie tout son contenu à la racine du site :
 
-Le bouton **Proposer sur GitHub** du générateur utilise l'adresse du dépôt donnée à `Build-Index.ps1` (`-RepoUrl`, par
-défaut `https://github.com/RetryProd/trackchest-addons`). Ce dépôt doit être **public** pour que d'autres puissent le
-copier (« fork ») et proposer des add-ons.
+| Fichier | Rôle |
+|---|---|
+| `index.html` | catalogue : tous les add-ons de `index.json`, recherche, téléchargement |
+| `creer.html` | formulaire de création (compteurs, thème, script), téléchargement du `.zip`, envoi |
+| `poster.html` | envoi d'un `.zip` |
+| `addon-rules.js` | règles de validation, lecture et création de `.zip` ; utilisé par les pages **et** par la fonction d'envoi |
+| `style.css` | style commun |
+| `addon.schema.json` | schéma pour l'autocomplétion dans VS Code |
+
+Le bouton **Créer un add-on** de la fenêtre Add-on de TrackChest ouvre ce site. Le guide complet (champs, permissions,
+compteurs, thème, scripts, exemples) est dans la documentation :
+<https://retryprod.gitbook.io/retryprod-docs/add-ons/creer-un-addon>.
 
 Si une règle de validation change, mets à jour ensemble : `src/ChestCounter/Addons.cs`, `scripts/Validate-Addon.ps1`,
-le générateur de `site-src/index.html` (fonction `validate`) et `site-src/addon.schema.json`.
+`site-src/addon-rules.js` et `site-src/addon.schema.json`.

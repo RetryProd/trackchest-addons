@@ -3,8 +3,9 @@
 # Publie ensuite tout le dossier site/ (GitHub Pages ou Cloudflare Pages, gratuits).
 #
 # Usage : ./scripts/Build-Index.ps1 -BaseUrl https://mon-catalogue.pages.dev
-#         -RepoUrl (facultatif) : l'adresse du dépôt GitHub, affichée dans le guide développeur.
-param([Parameter(Mandatory)][string]$BaseUrl, [string]$RepoUrl = 'https://github.com/RetryProd/trackchest-addons')
+# Les pages (catalogue, créer, poster), leurs fichiers communs et la fonction functions/api/proposer.js
+# (envoi d'un add-on sans compte) sont publiés avec : npx wrangler pages deploy site (depuis la racine du dépôt).
+param([Parameter(Mandatory)][string]$BaseUrl)
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
@@ -23,15 +24,8 @@ New-Item -ItemType Directory -Force $site | Out-Null
 Get-ChildItem -LiteralPath $site -Filter '*.zip' | Remove-Item
 Remove-Item -LiteralPath (Join-Path $site 'index.json'), (Join-Path $site 'index.json.sig') -ErrorAction SilentlyContinue
 
-# Guide développeur : site-src\index.html et addon.schema.json sont publiés à la racine du site.
-$utf8 = New-Object System.Text.UTF8Encoding($false)
-$repoLink = ''
-if ($RepoUrl -match '^https://') { $repoLink = " (<a href=`"$RepoUrl`">$RepoUrl</a>)" }
-$repoValue = ''
-if ($RepoUrl -match '^https://') { $repoValue = $RepoUrl.TrimEnd('/') }
-$page = [System.IO.File]::ReadAllText((Join-Path $root 'site-src\index.html'), $utf8).Replace('{{REPO_LINK}}', $repoLink).Replace('{{REPO_URL}}', $repoValue)
-[System.IO.File]::WriteAllText((Join-Path $site 'index.html'), $page, $utf8)
-Copy-Item -LiteralPath (Join-Path $root 'site-src\addon.schema.json') -Destination (Join-Path $site 'addon.schema.json') -Force
+# Pages du site : tout le contenu de site-src (HTML, CSS, JavaScript, schéma) est copié à la racine du site.
+Get-ChildItem -LiteralPath (Join-Path $root 'site-src') -File | Copy-Item -Destination $site -Force
 
 $entries = New-Object System.Collections.Generic.List[object]
 foreach ($folder in Get-ChildItem -LiteralPath (Join-Path $root 'addons') -Directory) {
