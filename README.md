@@ -37,7 +37,7 @@ Les valeurs possibles sont fixées par TrackChest : `metric` = `chests`, `opened
    téléchargé, puis que son contenu correspond à la fiche (identifiant, version, permissions).
 5. **Révocation** : ajoute un add-on dans `registry.json` → `revoked` (`"id"` ou `"id@1.0.0"`), republie : TrackChest le
    désactive chez tous les joueurs à la prochaine ouverture du catalogue.
-6. **Avant l'installation** : TrackChest affiche l'auteur, la version, le niveau de confiance et les permissions.
+6. **Avant l'installation** : TrackChest affiche le nom, la version, le niveau de confiance et les permissions.
 
 Rien de tout cela ne dépend d'un serveur : tout est des fichiers statiques.
 
@@ -90,7 +90,7 @@ Vérifie quand tu veux un add-on ou une signature :
 
 Pour changer un add-on déjà publié, **augmente sa `version`** (sinon les joueurs ne verront pas de mise à jour).
 
-## Proposer un add-on (auteurs)
+## Proposer un add-on (créateurs)
 
 Le point d'entrée est le site du catalogue (<https://trackchest-addons.pages.dev/>) : son **générateur** construit et
 vérifie le `manifest.json`, puis le bouton **Proposer sur GitHub** ouvre une page GitHub avec le fichier prérempli.
@@ -124,9 +124,10 @@ malveillant ne peut au pire qu'afficher des chiffres ou des couleurs trompeurs, 
 
 ## Guide pour les développeurs d'add-ons
 
-Le guide complet (champs, permissions, compteurs, thème, exemples) et le **générateur de manifeste** forment la page
-`site-src/index.html`. `Build-Index.ps1` la publie à la racine du site, avec le schéma `addon.schema.json` pour
-l'autocomplétion dans VS Code. Le bouton **Créer un add-on** de la fenêtre Add-on de TrackChest ouvre cette page.
+Le **générateur de manifeste** est la page `site-src/index.html`. `Build-Index.ps1` la publie à la racine du site, avec
+le schéma `addon.schema.json` pour l'autocomplétion dans VS Code. Le bouton **Créer un add-on** de la fenêtre Add-on de
+TrackChest ouvre cette page. Le guide complet (champs, permissions, compteurs, thème, exemples) est dans la
+documentation : <https://retryprod.gitbook.io/retryprod-docs/add-ons/creer-un-addon>.
 
 Le bouton **Proposer sur GitHub** du générateur utilise l'adresse du dépôt donnée à `Build-Index.ps1` (`-RepoUrl`, par
 défaut `https://github.com/RetryProd/trackchest-addons`). Ce dépôt doit être **public** pour que d'autres puissent le

@@ -44,7 +44,6 @@ foreach ($folder in Get-ChildItem -LiteralPath (Join-Path $root 'addons') -Direc
         id          = [string]$m.id
         name        = [string]$m.name
         version     = [string]$m.version
-        author      = [string]$m.author
         description = [string]$m.description
         permissions = [string[]]@($m.permissions)
         tier        = $(if ($verified -contains $m.id) { 'verified' } else { 'community' })

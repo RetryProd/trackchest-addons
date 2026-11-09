@@ -8,7 +8,7 @@ $root = Split-Path -Parent $PSScriptRoot
 $allPermissions = 'stats.read', 'overlay.rows', 'overlay.theme'
 $metrics = 'chests', 'opened', 'destroyed', 'sprites', 'wanted', 'cannons', 'treasures', 'matches'
 $scopes = 'total', 'last', 'session'
-$manifestKeys = 'schema', 'id', 'name', 'version', 'author', 'description', 'permissions', 'counters', 'theme'
+$manifestKeys = 'schema', 'id', 'name', 'version', 'description', 'permissions', 'counters', 'theme'
 $counterKeys = 'label', 'metric', 'scope', 'showLast'
 $themeKeys = 'background', 'border', 'line', 'muted', 'text', 'accent', 'treasure'
 
@@ -42,7 +42,6 @@ function Get-Errors([string]$folder) {
     elseif ($m.id -ne (Split-Path -Leaf $folder)) { $errors.Add('le nom du dossier doit être égal à id.') }
     if (-not (Test-Text $m.name 1 40)) { $errors.Add('name invalide (1 à 40 caractères).') }
     if ($m.version -isnot [string] -or $m.version -notmatch '^\d{1,4}\.\d{1,4}\.\d{1,4}$') { $errors.Add('version invalide (1.0.0).') }
-    if (-not (Test-Text $m.author 1 40)) { $errors.Add('author invalide (1 à 40 caractères).') }
     if (-not (Test-Text $m.description 0 200)) { $errors.Add('description invalide (200 caractères maximum).') }
 
     $permissions = @($m.permissions)

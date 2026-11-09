@@ -12,7 +12,6 @@ param(
     [Parameter(Position = 0)][string]$Commande = 'aide',
     [Parameter(Position = 1)][string]$Id,
     [ValidateSet('compteur', 'theme')][string]$Type = 'compteur',
-    [string]$Auteur = $env:USERNAME,
     # Pour « empaqueter » et « publier » : chemin de TrackChest.exe (sinon cherché dans le PATH).
     [string]$Exe,
     # Pour « publier » : clé privée de signature, adresse du site et nom du projet Cloudflare Pages.
@@ -29,7 +28,7 @@ $utf8 = New-Object System.Text.UTF8Encoding($false)
 function Show-Help {
     Write-Output @'
 Commandes :
-  nouveau <id> [-Type compteur|theme] [-Auteur "Pseudo"]   crée un add-on à partir d'un modèle
+  nouveau <id> [-Type compteur|theme]                      crée un add-on à partir d'un modèle
   verifier [<id>]                                            contrôle un add-on (ou tous)
   empaqueter <id> [-Exe chemin\TrackChest.exe]               crée dist\<id>-<version>.zip pour l'essayer
   publier [-Exe ...] [-Cle ...] [-Oui]                       (mainteneur) catalogue : construire, signer, publier
@@ -67,7 +66,7 @@ function Invoke-Exe([string]$exePath, [string[]]$arguments) {
     finally { Remove-Item -LiteralPath $out, $err -ErrorAction SilentlyContinue }
 }
 
-function New-Manifest([string]$id, [string]$kind, [string]$author) {
+function New-Manifest([string]$id, [string]$kind) {
     $name = (Get-Culture).TextInfo.ToTitleCase(($id -replace '-', ' '))
     if ($kind -eq 'theme') {
 @"
@@ -76,7 +75,6 @@ function New-Manifest([string]$id, [string]$kind, [string]$author) {
   "id": "$id",
   "name": "$name",
   "version": "1.0.0",
-  "author": "$author",
   "description": "Décris ton thème en une phrase.",
   "permissions": ["overlay.theme"],
   "theme": {
@@ -98,7 +96,6 @@ function New-Manifest([string]$id, [string]$kind, [string]$author) {
   "id": "$id",
   "name": "$name",
   "version": "1.0.0",
-  "author": "$author",
   "description": "Décris ton add-on en une phrase.",
   "permissions": ["stats.read", "overlay.rows"],
   "counters": [
@@ -116,7 +113,7 @@ switch ($Commande.ToLowerInvariant()) {
         $folder = Join-Path $root "addons\$Id"
         if (Test-Path -LiteralPath $folder) { throw "addons\$Id existe déjà." }
         New-Item -ItemType Directory -Path $folder | Out-Null
-        [System.IO.File]::WriteAllText((Join-Path $folder 'manifest.json'), (New-Manifest $Id $Type $Auteur), $utf8)
+        [System.IO.File]::WriteAllText((Join-Path $folder 'manifest.json'), (New-Manifest $Id $Type), $utf8)
         Write-Output "Créé : addons\$Id\manifest.json"
         Write-Output ''
         Write-Output '1. Ouvre ce fichier, change name, description et le contenu (référence : https://trackchest-addons.pages.dev/).'

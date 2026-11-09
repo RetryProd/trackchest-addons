@@ -3,7 +3,6 @@
   "id": "theme-nuit",
   "name": "Thème Nuit",
   "version": "1.0.0",
-  "author": "TrackChest",
   "description": "Un overlay bleu nuit avec des accents violets.",
   "permissions": ["overlay.theme"],
   "theme": {

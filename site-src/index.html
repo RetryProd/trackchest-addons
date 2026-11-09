@@ -33,6 +33,7 @@
   .gen input[type=text], .gen select { width: 100%; background: #0a0c11; color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 9px 11px; font: inherit; font-size: .93rem; }
   .gen input:focus, .gen select:focus { outline: 2px solid rgba(255,200,96,.45); border-color: transparent; }
   .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .grid-meta { display: grid; grid-template-columns: 1.2fr 1.4fr .6fr; gap: 14px; }
   .grid3 { display: grid; grid-template-columns: 2fr 1.4fr 1fr auto; gap: 10px; align-items: end; margin-bottom: 10px; }
   .grid-theme { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
   .field { margin-bottom: 14px; }
@@ -51,13 +52,13 @@
   .errors:empty { display: none; }
   .ok { color: var(--soft); font-size: .9rem; margin-top: 10px; }
   .hidden { display: none !important; }
-  @media (max-width: 640px) { .grid2, .grid3 { grid-template-columns: 1fr; } }
+  @media (max-width: 640px) { .grid2, .grid3, .grid-meta { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
 <main>
   <h1>Créer un add-on TrackChest</h1>
-  <p class="lead">Un add-on ajoute des <strong>compteurs</strong> et/ou un <strong>thème</strong> à l'overlay de TrackChest. C'est un fichier de données, jamais du code : il n'y a rien à programmer, juste un fichier JSON à remplir.</p>
+  <p class="lead">Un add-on ajoute des <strong>compteurs</strong> et/ou un <strong>thème</strong> à l'overlay de TrackChest. C'est un fichier de données, jamais du code : il n'y a rien à programmer, juste un fichier JSON à remplir. Le guide complet est dans la <a href="https://retryprod.gitbook.io/retryprod-docs/add-ons/creer-un-addon" target="_blank" rel="noopener">documentation</a>.</p>
 
   <div class="note">TrackChest valide lui-même chaque add-on. Un add-on ne peut ni lancer un programme, ni lire des fichiers, ni utiliser Internet : il ne peut faire que ce qu'il déclare dans ses <code>permissions</code>, que le joueur voit avant d'installer.</div>
 
@@ -70,11 +71,10 @@
       <label><input type="checkbox" id="useTheme"> Ajouter un thème</label>
     </div>
 
-    <div class="grid2">
+    <div class="grid-meta">
       <div class="field"><label for="f-id">Identifiant (id)</label><input type="text" id="f-id" placeholder="mon-addon" maxlength="40" autocomplete="off" spellcheck="false"></div>
       <div class="field"><label for="f-name">Nom affiché</label><input type="text" id="f-name" placeholder="Mon add-on" maxlength="40" autocomplete="off"></div>
       <div class="field"><label for="f-version">Version</label><input type="text" id="f-version" value="1.0.0" maxlength="14" autocomplete="off"></div>
-      <div class="field"><label for="f-author">Auteur</label><input type="text" id="f-author" placeholder="TonPseudo" maxlength="40" autocomplete="off"></div>
     </div>
     <div class="field"><label for="f-desc">Description (200 caractères maximum)</label><input type="text" id="f-desc" placeholder="Affiche mes coffres de la session." maxlength="200" autocomplete="off"></div>
 
@@ -102,128 +102,6 @@
     </div>
   </div>
 
-  <h2>1. Le fichier manifest.json</h2>
-  <p>Crée un dossier <code>addons/mon-addon/</code> avec un seul fichier, <code>manifest.json</code> (enregistré en UTF-8 <strong>sans BOM</strong>). Le nom du dossier est identique à l'<code>id</code>.</p>
-
-  <h3>Exemple : un compteur</h3>
-<pre><code>{
-  "schema": 1,
-  "id": "mon-compteur",
-  "name": "Mon compteur",
-  "version": "1.0.0",
-  "author": "TonPseudo",
-  "description": "Affiche mes coffres cassés et mes canons à butin.",
-  "permissions": ["stats.read", "overlay.rows"],
-  "counters": [
-    { "label": "Cassés", "metric": "destroyed", "scope": "total", "showLast": true },
-    { "label": "Canons", "metric": "cannons", "scope": "session" }
-  ]
-}</code></pre>
-
-  <h3>Exemple : un thème</h3>
-<pre><code>{
-  "schema": 1,
-  "id": "mon-theme",
-  "name": "Mon thème",
-  "version": "1.0.0",
-  "author": "TonPseudo",
-  "description": "Un overlay rouge sombre.",
-  "permissions": ["overlay.theme"],
-  "theme": {
-    "background": "#14080A",
-    "accent": "#FF5A5F",
-    "text": "#FFF1F1"
-  }
-}</code></pre>
-
-  <h2>2. Référence</h2>
-
-  <h3>Champs généraux</h3>
-  <table>
-    <tr><th>Champ</th><th>Règle</th></tr>
-    <tr><td><code>schema</code></td><td>toujours <code>1</code></td></tr>
-    <tr><td><code>id</code></td><td>3 à 40 caractères : minuscules, chiffres et tirets (<code>mon-addon</code>). Unique dans le catalogue.</td></tr>
-    <tr><td><code>name</code></td><td>1 à 40 caractères</td></tr>
-    <tr><td><code>version</code></td><td>format <code>1.0.0</code>. Augmente-la à chaque modification, sinon les joueurs ne voient pas de mise à jour.</td></tr>
-    <tr><td><code>author</code></td><td>1 à 40 caractères</td></tr>
-    <tr><td><code>description</code></td><td>200 caractères maximum</td></tr>
-    <tr><td><code>permissions</code></td><td>la liste de ce que l'add-on utilise (voir ci-dessous). Une permission inutilisée est refusée.</td></tr>
-    <tr><td><code>counters</code></td><td>jusqu'à 8 compteurs (facultatif)</td></tr>
-    <tr><td><code>theme</code></td><td>des couleurs (facultatif). Il faut au moins un compteur ou un thème.</td></tr>
-  </table>
-
-  <h3>Permissions</h3>
-  <table>
-    <tr><th>Permission</th><th>Ce qu'elle permet</th></tr>
-    <tr><td><code>stats.read</code></td><td>lire tes statistiques (coffres, parties, trésors) pour calculer un compteur</td></tr>
-    <tr><td><code>overlay.rows</code></td><td>ajouter des lignes à l'overlay</td></tr>
-    <tr><td><code>overlay.theme</code></td><td>changer les couleurs de l'overlay</td></tr>
-  </table>
-  <p>Les compteurs demandent <code>stats.read</code> et <code>overlay.rows</code>. Un thème demande <code>overlay.theme</code>.</p>
-
-  <h3>Compteurs</h3>
-  <table>
-    <tr><th>Champ</th><th>Valeurs</th></tr>
-    <tr><td><code>label</code></td><td>le texte de la ligne, 24 caractères maximum</td></tr>
-    <tr><td><code>metric</code></td><td>ce qu'on compte, voir ci-dessous</td></tr>
-    <tr><td><code>scope</code></td><td><code>total</code> (toutes les parties), <code>session</code> (depuis le lancement de TrackChest), <code>last</code> (la dernière partie)</td></tr>
-    <tr><td><code>showLast</code></td><td><code>true</code> ajoute « · n dernière partie » après le total (avec <code>scope</code> = <code>total</code>)</td></tr>
-  </table>
-  <table>
-    <tr><th>metric</th><th>Ce que ça compte</th></tr>
-    <tr><td><code>chests</code></td><td>coffres ouverts ou cassés, plus les canons à butin (le total de TrackChest)</td></tr>
-    <tr><td><code>opened</code></td><td>coffres ouverts</td></tr>
-    <tr><td><code>destroyed</code></td><td>coffres cassés</td></tr>
-    <tr><td><code>sprites</code></td><td>coffres d'esprit</td></tr>
-    <tr><td><code>wanted</code></td><td>cartes Wanted ramassées</td></tr>
-    <tr><td><code>cannons</code></td><td>canons à butin tirés</td></tr>
-    <tr><td><code>treasures</code></td><td>trésors trouvés</td></tr>
-    <tr><td><code>matches</code></td><td>nombre de parties</td></tr>
-  </table>
-
-  <h3>Thème</h3>
-  <p>Toutes les couleurs sont facultatives, au format <code>#RRGGBB</code>. Une couleur absente garde l'aspect d'origine.</p>
-  <table>
-    <tr><th>Clé</th><th>Couleur de…</th></tr>
-    <tr><td><code>background</code></td><td>le fond de l'overlay</td></tr>
-    <tr><td><code>border</code></td><td>la bordure arrondie</td></tr>
-    <tr><td><code>line</code></td><td>les traits de séparation</td></tr>
-    <tr><td><code>muted</code></td><td>les textes secondaires (légendes, noms des lignes)</td></tr>
-    <tr><td><code>text</code></td><td>le texte principal (valeurs)</td></tr>
-    <tr><td><code>accent</code></td><td>le total de coffres et le badge « partie en cours »</td></tr>
-    <tr><td><code>treasure</code></td><td>la ligne Trésors</td></tr>
-  </table>
-  <p>Un seul thème est actif à la fois : en activer un désactive l'autre.</p>
-
-  <h2>3. Développer avec la commande addon.ps1</h2>
-  <p>Pour travailler sur ton ordinateur, copie le dépôt du catalogue{{REPO_LINK}} et utilise la commande <code>addon.ps1</code> dans le dossier du dépôt :</p>
-<pre><code>.\scripts\addon.ps1 nouveau mon-addon              # crée addons\mon-addon\manifest.json à remplir
-.\scripts\addon.ps1 nouveau mon-theme -Type theme  # idem, avec un modèle de thème
-.\scripts\addon.ps1 verifier mon-addon             # affiche toutes les erreurs
-.\scripts\addon.ps1 empaqueter mon-addon           # crée dist\mon-addon-1.0.0.zip</code></pre>
-  <p>Pour <strong>essayer</strong> ton add-on avant de le proposer : dans TrackChest, <strong>Add-on → Ajouter un fichier…</strong> et choisis le <code>.zip</code> créé par <code>empaqueter</code>. Il apparaît comme « Local, non vérifié ». Les contrôles affichent : clé inconnue, couleur invalide, fichier en trop (un add-on ne contient que <code>manifest.json</code>), etc. TrackChest refait les mêmes contrôles à l'installation.</p>
-
-  <p>Dans VS Code, le schéma <a href="addon.schema.json">addon.schema.json</a> donne l'autocomplétion et les erreurs pendant que tu écris. Ajoute dans tes réglages :</p>
-<pre><code>"json.schemas": [
-  { "fileMatch": ["**/addons/*/manifest.json"], "url": "./addon.schema.json" }
-]</code></pre>
-
-  <h2>4. Proposer son add-on</h2>
-  <ol>
-    <li>Utilise le <a href="#gen">générateur en haut de cette page</a> et clique sur <strong>Proposer sur GitHub</strong>. Si tu as écrit le fichier toi-même, colle son contenu dans GitHub sous le nom <code>addons/mon-addon/manifest.json</code>.</li>
-    <li>GitHub te propose de copier le dépôt (« fork ») puis d'ouvrir une <strong>pull request</strong> : valide.</li>
-    <li>Les contrôles automatiques se lancent sur ta proposition et te disent ce qui ne va pas.</li>
-    <li>Le mainteneur relit ton manifeste (il est court), l'accepte et publie le catalogue. Les joueurs le voient ensuite dans <strong>Add-on → Actualiser</strong>.</li>
-  </ol>
-
-  <h2>5. Niveaux de confiance</h2>
-  <table>
-    <tr><th>Niveau</th><th>Signification</th></tr>
-    <tr><td>✓ Vérifié</td><td>relu par le mainteneur, catalogue signé</td></tr>
-    <tr><td>Communauté</td><td>contrôles automatiques seulement : TrackChest affiche un avertissement</td></tr>
-    <tr><td>Local</td><td>fichier ajouté à la main par un joueur, non vérifié</td></tr>
-  </table>
-  <p>Le catalogue est signé : tout fichier modifié après publication est refusé par TrackChest, et un add-on dangereux peut être révoqué à distance.</p>
 </main>
 
 <script>
@@ -292,7 +170,7 @@
 
   function build() {
     var m = { schema: 1, id: $('f-id').value.trim(), name: $('f-name').value.trim(), version: $('f-version').value.trim(),
-              author: $('f-author').value.trim(), description: $('f-desc').value.trim(), permissions: [] };
+              description: $('f-desc').value.trim(), permissions: [] };
     var useCounters = $('useCounters').checked, useTheme = $('useTheme').checked;
     if (useCounters) { m.permissions.push('stats.read', 'overlay.rows'); m.counters = []; }
     if (useTheme) m.permissions.push('overlay.theme');
@@ -313,7 +191,6 @@
     if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(m.id) || m.id.length < 3 || m.id.length > 40) e.push('Identifiant : 3 à 40 caractères, minuscules, chiffres et tirets (ex. mon-addon).');
     if (!text(m.name, 1, 40)) e.push('Nom : 1 à 40 caractères.');
     if (!/^\d{1,4}\.\d{1,4}\.\d{1,4}$/.test(m.version)) e.push('Version : format 1.0.0.');
-    if (!text(m.author, 1, 40)) e.push('Auteur : 1 à 40 caractères.');
     if (!text(m.description, 0, 200)) e.push('Description : 200 caractères maximum.');
     if (!m.counters && !m.theme) e.push('Choisis au moins des compteurs ou un thème.');
     if (m.counters) {
@@ -369,7 +246,7 @@
     if (counterRows.children.length < 8) addCounter();
     touched = true; refresh();
   });
-  ['f-id', 'f-name', 'f-version', 'f-author', 'f-desc', 'useCounters', 'useTheme'].forEach(function (id) {
+  ['f-id', 'f-name', 'f-version', 'f-desc', 'useCounters', 'useTheme'].forEach(function (id) {
     $(id).addEventListener('input', function () { touched = true; refresh(); });
     $(id).addEventListener('change', function () { touched = true; refresh(); });
   });
