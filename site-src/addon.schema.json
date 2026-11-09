@@ -1,0 +1,52 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Add-on TrackChest (manifest.json)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "id", "name", "version", "author", "permissions"],
+  "properties": {
+    "schema": { "const": 1 },
+    "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$", "minLength": 3, "maxLength": 40 },
+    "name": { "type": "string", "minLength": 1, "maxLength": 40 },
+    "version": { "type": "string", "pattern": "^\\d{1,4}\\.\\d{1,4}\\.\\d{1,4}$" },
+    "author": { "type": "string", "minLength": 1, "maxLength": 40 },
+    "description": { "type": "string", "maxLength": 200 },
+    "permissions": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "enum": ["stats.read", "overlay.rows", "overlay.theme"] }
+    },
+    "counters": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["label", "metric", "scope"],
+        "properties": {
+          "label": { "type": "string", "minLength": 1, "maxLength": 24 },
+          "metric": { "enum": ["chests", "opened", "destroyed", "sprites", "wanted", "cannons", "treasures", "matches"] },
+          "scope": { "enum": ["total", "session", "last"] },
+          "showLast": { "type": "boolean" }
+        }
+      }
+    },
+    "theme": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "background": { "$ref": "#/definitions/color" },
+        "border": { "$ref": "#/definitions/color" },
+        "line": { "$ref": "#/definitions/color" },
+        "muted": { "$ref": "#/definitions/color" },
+        "text": { "$ref": "#/definitions/color" },
+        "accent": { "$ref": "#/definitions/color" },
+        "treasure": { "$ref": "#/definitions/color" }
+      }
+    }
+  },
+  "definitions": {
+    "color": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" }
+  }
+}

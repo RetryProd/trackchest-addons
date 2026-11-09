@@ -1,0 +1,11 @@
+# Ne jamais publier la clé privée de signature.
+*.key
+!addon-public.key
+
+# Paquets de test créés par addon.ps1 empaqueter
+dist/
+
+# Catalogue construit par Build-Index.ps1 (publié avec wrangler, pas versionné)
+site/*
+!site/.gitkeep
+.wrangler/

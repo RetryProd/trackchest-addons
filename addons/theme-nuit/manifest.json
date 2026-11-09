@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "id": "theme-nuit",
+  "name": "Thème Nuit",
+  "version": "1.0.0",
+  "author": "TrackChest",
+  "description": "Un overlay bleu nuit avec des accents violets.",
+  "permissions": ["overlay.theme"],
+  "theme": {
+    "background": "#0B0A1A",
+    "border": "#2A2550",
+    "line": "#1C1936",
+    "muted": "#9A97C4",
+    "text": "#F4F3FF",
+    "accent": "#8B7CFF",
+    "treasure": "#FFB454"
+  }
+}

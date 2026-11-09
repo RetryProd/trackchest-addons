@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "id": "stats-detail",
+  "name": "Statistiques détaillées",
+  "version": "1.0.0",
+  "author": "TrackChest",
+  "description": "Ajoute à l'overlay les coffres cassés, les coffres d'esprit, les cartes Wanted et les canons à butin.",
+  "permissions": ["stats.read", "overlay.rows"],
+  "counters": [
+    { "label": "Cassés", "metric": "destroyed", "scope": "total", "showLast": true },
+    { "label": "Esprits", "metric": "sprites", "scope": "total", "showLast": true },
+    { "label": "Cartes Wanted", "metric": "wanted", "scope": "total", "showLast": true },
+    { "label": "Canons à butin", "metric": "cannons", "scope": "total", "showLast": true }
+  ]
+}

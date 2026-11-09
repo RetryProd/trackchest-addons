@@ -1,0 +1,17 @@
+name: Valider les add-ons
+
+on:
+  pull_request:
+    paths:
+      - 'addons/**'
+      - 'registry.json'
+      - 'scripts/**'
+
+jobs:
+  validate:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Contrôles automatiques
+        shell: powershell
+        run: ./scripts/Validate-Addon.ps1
