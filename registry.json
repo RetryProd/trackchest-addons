@@ -4,5 +4,7 @@
     "stats-detail",
     "theme-nuit"
   ],
-  "revoked": []
+  "revoked": [
+    "reveil-jeton-pirate"
+  ]
 }
