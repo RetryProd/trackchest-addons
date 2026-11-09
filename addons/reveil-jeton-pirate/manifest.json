@@ -2,9 +2,9 @@
   "schema": 1,
   "id": "reveil-jeton-pirate",
   "name": "Réveil Jeton Pirate",
-  "version": "1.0.0",
-  "description": "Affiche le multiplicateur du Jeton Pirate selon les créneaux du samedi soir et du dimanche matin.",
-  "permissions": [
+  "version": "1.0.1",
+  "description": "Lit l'heure locale du PC à chaque actualisation de l'overlay et affiche le multiplicateur du Jeton Pirate."
+  ,"permissions": [
     "stats.read",
     "overlay.script"
   ]
