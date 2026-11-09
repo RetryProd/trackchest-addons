@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "id": "test-envoi-site",
+  "name": "Test envoi du site",
+  "version": "0.0.1",
+  "description": "Proposition de test créée pour vérifier l’envoi sans compte. À refuser.",
+  "permissions": [
+    "overlay.theme"
+  ],
+  "theme": {
+    "accent": "#FF5A5F"
+  }
+}
