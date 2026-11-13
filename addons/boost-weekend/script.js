@@ -1,8 +1,9 @@
-// Add-on TrackChest : Boost Week-end (Samedi 20h-22h x1.5, Dimanche 3h-5h x2)
-// Ne modifie pas le nombre de coffres affiches : applique le boost uniquement au Jeton pirate
-// et affiche l'etat du boost (actif ou prochain creneau).
+// Add-on TrackChest : Boost Hebdo (Samedi 20h-22h x1.5, Dimanche 3h-5h x2)
+// Ne modifie pas le nombre de coffres affiches et n'elargit pas l'overlay.
 
 var DROP_DENOMINATOR = 137500;
+var DOT = "\u00B7";
+var BULLET = "\u25CF";
 
 function boostForDate(d) {
   if (!d || isNaN(d.getTime())) return 1;
@@ -67,11 +68,10 @@ function nextBoostStatus(now) {
     var rh = Math.floor(remMin / 60);
     var rm = remMin % 60;
     var remTxt = rh > 0 ? rh + "h" + (rm < 10 ? "0" : "") + rm : rm + " min";
-    var labelAct = active === 2 ? "ACTIF x2" : "ACTIF x1,5";
     return {
       active: active,
-      value: labelAct,
-      detail: "· reste " + remTxt,
+      value: active === 2 ? "x2" : "x1,5",
+      detail: DOT + " reste " + remTxt,
       color: active === 2 ? "#FF6B6B" : "#FFC860"
     };
   }
@@ -102,8 +102,8 @@ function nextBoostStatus(now) {
 
   return {
     active: 1,
-    value: isSatNext ? "Sam. 20h (x1,5)" : "Dim. 3h (x2)",
-    detail: "· " + countdown,
+    value: isSatNext ? "x1,5" : "x2",
+    detail: DOT + " " + countdown,
     color: null
   };
 }
@@ -129,30 +129,27 @@ function overlay(view, data) {
   var finalTotalOpened = olderOpened + boostedMatchesOpened;
 
   if (status.active > 1 && !data.inProgress) {
-    view.badge = "● BOOST x" + String(status.active).replace(".", ",");
+    view.badge = BULLET + " BOOST x" + String(status.active).replace(".", ",");
   }
 
-  // On ne touche ni a view.total, ni a view.current, ni aux lignes Session / Derniere.
-  // Seule la probabilite du Jeton pirate prend en compte le boost.
   var rows = Array.isArray(view.rows) ? view.rows : [];
+  var hasSeparator = false;
   for (var r = 0; r < rows.length; r++) {
     var row = rows[r];
+    if (row.separator) hasSeparator = true;
     if (row.icon === "Pirate_Token.png" || row.label === "Jeton pirate" || row.label === "Pirate token") {
       row.value = fmtOdds(finalTotalOpened, lang);
-      if (status.active > 1) {
-        row.detail = "· boost x" + String(status.active).replace(".", ",") + " actif";
-      }
     }
   }
 
   if (rows.length < 16) {
     rows.push({
-      label: "Boost week-end",
+      label: "Boost Hebdo",
       value: status.value,
       detail: status.detail,
       color: status.color,
       icon: "Pirate_Token.png",
-      separator: true
+      separator: !hasSeparator
     });
   }
 
