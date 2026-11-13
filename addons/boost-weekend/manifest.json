@@ -1,8 +1,8 @@
 {
   "schema": 1,
   "id": "boost-weekend",
-  "name": "Boost Weekend",
-  "version": "1.0.0",
+  "name": "Boost Hebdo",
+  "version": "1.0.1",
   "description": "Boost du Jeton pirate tous les samedis de 20h a 22h (x1,5) et dimanches de 3h a 5h (x2), sans modifier le nombre de coffres.",
   "permissions": ["stats.read", "overlay.script"]
 }
