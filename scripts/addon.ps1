@@ -181,10 +181,12 @@ switch ($Commande.ToLowerInvariant()) {
         New-Item -ItemType Directory -Force $dist | Out-Null
         $zip = Join-Path $dist "$($manifest.id)-$($manifest.version).zip"
         if (Test-Path -LiteralPath $zip) { Remove-Item -LiteralPath $zip }
-        # manifest.json, plus script.js pour un add-on à script : rien d'autre.
+        # manifest.json, icônes .png, plus script.js pour un add-on à script : rien d'autre.
         $files = @($manifestPath)
         $scriptPath = Join-Path $root "addons\$Id\script.js"
         if (Test-Path -LiteralPath $scriptPath) { $files += $scriptPath }
+        $iconPaths = Get-ChildItem -LiteralPath (Join-Path $root "addons\$Id") -Filter '*.png' -File | Select-Object -ExpandProperty FullName
+        if ($iconPaths) { $files += $iconPaths }
         Compress-Archive -LiteralPath $files -DestinationPath $zip
         Write-Output "Paquet : $zip"
         $exePath = Find-Exe

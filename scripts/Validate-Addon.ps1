@@ -9,7 +9,7 @@ $allPermissions = 'stats.read', 'overlay.rows', 'overlay.theme', 'overlay.script
 $metrics = 'chests', 'opened', 'destroyed', 'sprites', 'wanted', 'cannons', 'treasures', 'matches'
 $scopes = 'total', 'last', 'session'
 $manifestKeys = 'schema', 'id', 'name', 'version', 'description', 'permissions', 'counters', 'theme'
-$counterKeys = 'label', 'metric', 'scope', 'showLast'
+$counterKeys = 'label', 'metric', 'scope', 'showLast', 'icon'
 $themeKeys = 'background', 'border', 'line', 'muted', 'text', 'accent', 'treasure'
 
 function Test-Text($value, [int]$min, [int]$max) {
@@ -23,8 +23,8 @@ function Get-Errors([string]$folder) {
     $file = Join-Path $folder 'manifest.json'
     if (-not (Test-Path -LiteralPath $file)) { $errors.Add('manifest.json absent.'); return $errors }
 
-    # Un dossier d'add-on contient le manifeste, script.js pour un add-on à script, et un README pour les humains.
-    foreach ($other in Get-ChildItem -LiteralPath $folder -Force | Where-Object { $_.Name -notin 'manifest.json', 'README.md', 'script.js' }) {
+    # Un dossier d'add-on contient le manifeste, des icônes .png facultatives, script.js pour un add-on à script, et un README pour les humains.
+    foreach ($other in Get-ChildItem -LiteralPath $folder -Force | Where-Object { $_.Name -notin 'manifest.json', 'README.md', 'script.js' -and $_.Name -notmatch '^[A-Za-z0-9_-]{1,32}\.png$' }) {
         $errors.Add("fichier interdit : $($other.Name)")
     }
 
@@ -56,6 +56,7 @@ function Get-Errors([string]$folder) {
         if ($c.metric -cnotin $metrics) { $errors.Add("metric inconnue : $($c.metric)") }
         if ($c.scope -cnotin $scopes) { $errors.Add("scope inconnu : $($c.scope)") }
         if ($null -ne $c.showLast -and $c.showLast -isnot [bool]) { $errors.Add('showLast doit être true ou false.') }
+        if ($null -ne $c.icon -and ($c.icon -isnot [string] -or $c.icon -notmatch '^[A-Za-z0-9_-]{1,32}(\.png)?$')) { $errors.Add("icône de compteur invalide : $($c.icon)") }
     }
     if ($counters.Count -gt 0 -and -not (($permissions -ccontains 'stats.read') -and ($permissions -ccontains 'overlay.rows'))) {
         $errors.Add('les compteurs demandent stats.read et overlay.rows.')

@@ -26,7 +26,8 @@
           "label": { "type": "string", "minLength": 1, "maxLength": 24 },
           "metric": { "enum": ["chests", "opened", "destroyed", "sprites", "wanted", "cannons", "treasures", "matches"] },
           "scope": { "enum": ["total", "session", "last"] },
-          "showLast": { "type": "boolean" }
+          "showLast": { "type": "boolean" },
+          "icon": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,32}(\\.png)?$" }
         }
       }
     },

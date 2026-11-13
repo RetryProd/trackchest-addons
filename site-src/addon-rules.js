@@ -9,7 +9,7 @@ export const THEME_KEYS = ['background', 'border', 'line', 'muted', 'text', 'acc
 export const LIMITS = { zip: 64 * 1024, manifest: 16 * 1024, script: 32 * 1024, counters: 8 };
 
 const MANIFEST_KEYS = ['schema', 'id', 'name', 'version', 'description', 'permissions', 'counters', 'theme'];
-const COUNTER_KEYS = ['label', 'metric', 'scope', 'showLast'];
+const COUNTER_KEYS = ['label', 'metric', 'scope', 'showLast', 'icon'];
 
 export const PERMISSION_TEXT = {
   'stats.read': 'Lire les statistiques (coffres, parties, trésors)',
@@ -51,6 +51,7 @@ export function validateManifest(m, scriptSource) {
       if (!METRICS.includes(c.metric)) e.push(`Compteur ${n} : metric inconnue (${c.metric}).`);
       if (!SCOPES.includes(c.scope ?? 'total')) e.push(`Compteur ${n} : scope inconnu (${c.scope}).`);
       if (c.showLast !== undefined && typeof c.showLast !== 'boolean') e.push(`Compteur ${n} : showLast doit être true ou false.`);
+      if (c.icon !== undefined && (typeof c.icon !== 'string' || !/^[A-Za-z0-9_-]{1,32}(\.png)?$/.test(c.icon))) e.push(`Compteur ${n} : icône invalide (${c.icon}).`);
     });
   }
   const counterCount = Array.isArray(counters) ? counters.length : 0;
