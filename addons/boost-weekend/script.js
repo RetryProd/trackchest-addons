@@ -1,15 +1,26 @@
 // Add-on TrackChest : Boost Hebdo (Samedi 20h-22h x1.5, Dimanche 3h-5h x2)
+// Exception : le samedi 14/11/2026, le boost x1.5 dure jusqu'a 00:00.
 // Ne modifie pas le nombre de coffres affiches et n'elargit pas l'overlay.
 
 var DROP_DENOMINATOR = 137500;
 var DOT = "\u00B7";
 var BULLET = "\u25CF";
 
+// Samedis dont le boost finit apres 22h (cle AAAA-MM-JJ, valeur : heure de fin, 24 = minuit).
+var EXTENDED_SATURDAYS = { "2026-11-14": 24 };
+
+function saturdayEndHour(d) {
+  var mo = d.getMonth() + 1;
+  var da = d.getDate();
+  var key = d.getFullYear() + "-" + (mo < 10 ? "0" : "") + mo + "-" + (da < 10 ? "0" : "") + da;
+  return EXTENDED_SATURDAYS[key] || 22;
+}
+
 function boostForDate(d) {
   if (!d || isNaN(d.getTime())) return 1;
   var day = d.getDay(); // 0 = dimanche, 6 = samedi
   var hour = d.getHours();
-  if (day === 6 && hour >= 20 && hour < 22) return 1.5;
+  if (day === 6 && hour >= 20 && hour < saturdayEndHour(d)) return 1.5;
   if (day === 0 && hour >= 3 && hour < 5) return 2;
   return 1;
 }
@@ -63,7 +74,7 @@ function nextBoostStatus(now) {
   var m = now.getMinutes();
 
   if (active > 1) {
-    var endHour = day === 6 ? 22 : 5;
+    var endHour = day === 6 ? saturdayEndHour(now) : 5;
     var remMin = (endHour - h - 1) * 60 + (60 - m);
     var rh = Math.floor(remMin / 60);
     var rm = remMin % 60;
