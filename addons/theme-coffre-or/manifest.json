@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "id": "theme-coffre-or",
+  "name": "Coffre d'or",
+  "version": "1.0.0",
+  "description": "Un overlay brun-noir cerclé d'or, aux couleurs d'un coffre au trésor.",
+  "permissions": ["overlay.theme"],
+  "theme": {
+    "background": "#120C04",
+    "border": "#B8862B",
+    "line": "#3A2A10",
+    "muted": "#D8B26A",
+    "text": "#FFF4D6",
+    "accent": "#FFC860",
+    "treasure": "#FF8A3D"
+  }
+}
