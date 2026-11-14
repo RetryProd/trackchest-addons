@@ -192,12 +192,18 @@
           if (!a.revoked && !confirm(`Révoquer « ${a.name} » ?\nIl sera désactivé chez les joueurs qui l'ont installé.`)) return;
           change(a.revoked ? 'unrevoke' : 'revoke', a.id, 'Mise à jour');
         });
+        const deleteButton = el('button', { type: 'button', class: 'btn small danger', text: 'Supprimer' });
+        deleteButton.addEventListener('click', () => {
+          if (!confirm(`Supprimer « ${a.name} » ?
+Son dossier est effacé du catalogue et l'add-on est désactivé chez les joueurs qui l'ont installé.`)) return;
+          change('delete', a.id, 'Suppression');
+        });
         return el('tr', {}, [
           el('td', {}, [el('strong', { text: a.name }), el('div', { class: 'who', text: a.id })]),
           el('td', { text: a.version }),
           el('td', { text: a.revoked ? 'Révoqué' : a.tier === 'verified' ? '✓ Vérifié' : 'Communauté' }),
           el('td', { class: 'who', text: a.permissions.map(permissionText).join(' · ') }),
-          el('td', {}, [el('div', { class: 'actions', style: 'margin:0' }, [verifyButton, revokeButton])]),
+          el('td', {}, [el('div', { class: 'actions', style: 'margin:0' }, [verifyButton, revokeButton, deleteButton])]),
         ]);
       });
       box.appendChild(el('table', { class: 'catalog' }, [el('thead', {}, [head]), el('tbody', {}, rows)]));

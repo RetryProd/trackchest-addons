@@ -161,3 +161,26 @@ export async function rejectProposal(env, number, reason) {
     await gh(env, 'DELETE', `/repos/${repo}/git/refs/heads/${pull.data.head.ref}`);
   return { status: 200, ok: true };
 }
+
+/**
+ * Supprime un add-on du catalogue : efface son dossier addons/<id>/ sur main, le retire de « Vérifié » et l'ajoute à
+ * « révoqués » pour que les joueurs qui l'ont installé le voient désactivé à leur prochaine ouverture du catalogue.
+ */
+export async function deleteAddon(env, id) {
+  const repo = repoOf(env);
+  const dir = await gh(env, 'GET', `/repos/${repo}/contents/addons/${id}?ref=main`);
+  if (!dir.ok || !Array.isArray(dir.data)) return { status: 404, error: 'Add-on introuvable.' };
+  for (const file of dir.data) {
+    if (file.type !== 'file') continue;
+    const del = await gh(env, 'DELETE', `/repos/${repo}/contents/${file.path}`, {
+      message: `Suppression de l'add-on ${id}`, branch: 'main', sha: file.sha,
+    });
+    if (!del.ok) return { status: 502, error: `GitHub a refusé de supprimer ${file.name} (${del.status}).` };
+  }
+  await editRegistry(env, `Add-on ${id} : révoqué après suppression`, (r) => {
+    r.verified = r.verified.filter((x) => x !== id);
+    r.revoked.push(id);
+  });
+  clearCatalogCache();
+  return { status: 200, ok: true };
+}

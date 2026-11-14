@@ -1,10 +1,10 @@
 import { guard, reply } from '../../_lib/auth.js';
 import { getCatalog } from '../../_lib/catalog.js';
-import { editRegistry } from '../../_lib/proposals.js';
+import { editRegistry, deleteAddon } from '../../_lib/proposals.js';
 import { clearCatalogCache } from '../../_lib/catalog.js';
 
 // GET  /api/admin/catalog                    les add-ons publiés (et les dossiers invalides)
-// POST /api/admin/catalog { action, id }     verify / unverify (badge Vérifié), revoke / unrevoke (retrait chez les joueurs)
+// POST /api/admin/catalog { action, id }     verify / unverify (badge Vérifié), revoke / unrevoke (retrait chez les joueurs), delete (supprime l'add-on et le révoque)
 export async function onRequestGet({ request, env }) {
   const denied = await guard(request, env);
   if (denied) return denied;
@@ -31,6 +31,12 @@ export async function onRequestPost({ request, env }) {
     revoke: (r) => { r.revoked.push(id); },
     unrevoke: (r) => { r.revoked = r.revoked.filter((x) => x !== id && !x.startsWith(`${id}@`)); },
   };
+  if (body.action === 'delete') {
+    try {
+      const done = await deleteAddon(env, id);
+      return reply(done.status, done.ok ? { ok: true } : { error: done.error });
+    } catch (err) { return reply(502, { error: err.message }); }
+  }
   if (!actions[body.action]) return reply(400, { error: 'Action inconnue.' });
   try {
     await editRegistry(env, `Add-on ${id} : ${body.action}`, actions[body.action]);
