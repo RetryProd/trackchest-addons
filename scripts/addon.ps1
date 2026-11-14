@@ -202,7 +202,9 @@ switch ($Commande.ToLowerInvariant()) {
         & (Join-Path $PSScriptRoot 'Validate-Addon.ps1')
         if ($LASTEXITCODE -ne 0) { throw 'Des add-ons sont invalides : corrige-les avant de publier.' }
         # Sans ces deux secrets, le catalogue en ligne ne répondrait plus aux joueurs : on refuse de publier.
+        $ancien = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
         $secrets = (& npx.cmd --yes wrangler pages secret list --project-name $Projet 2>&1 | Out-String)
+        $ErrorActionPreference = $ancien
         foreach ($secret in 'GITHUB_TOKEN', 'ADMIN_PASSWORD', 'SIGNING_KEY') {
             if ($secrets -notmatch $secret) { throw "Le secret $secret n'est pas configuré sur Cloudflare : voir README.md, section « Administration »." }
         }
@@ -212,8 +214,12 @@ switch ($Commande.ToLowerInvariant()) {
         }
         & (Join-Path $PSScriptRoot 'Build-Index.ps1')
         Push-Location $root
-        try { & npx.cmd --yes wrangler pages deploy site --project-name $Projet --branch production }
-        finally { Pop-Location }
+        $ancien = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
+        try {
+            & npx.cmd --yes wrangler pages deploy site --project-name $Projet --branch production
+            if ($LASTEXITCODE -ne 0) { throw "Le déploiement a échoué (code $LASTEXITCODE)." }
+        }
+        finally { Pop-Location; $ErrorActionPreference = $ancien }
     }
     default { Show-Help }
 }
