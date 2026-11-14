@@ -193,9 +193,9 @@ export function makeZip(files) {
   const encoder = new TextEncoder();
   const parts = [], central = [];
   let offset = 0;
-  const now = new Date();
-  const time = (now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1);
-  const date = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
+  // Date fixe (1er janvier 1980) : un même contenu donne toujours le même .zip, donc la même empreinte SHA-256.
+  const time = 0;
+  const date = (0 << 9) | (1 << 5) | 1;
   for (const f of files) {
     const name = encoder.encode(f.name);
     const data = encoder.encode(f.text);

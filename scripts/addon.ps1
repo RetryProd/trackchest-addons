@@ -32,7 +32,7 @@ Commandes :
   nouveau <id> [-Type compteur|theme|script]               crée un add-on à partir d'un modèle
   verifier [<id>]                                            contrôle un add-on (ou tous)
   empaqueter <id> [-Exe chemin\TrackChest.exe]               crée dist\<id>-<version>.zip pour l'essayer
-  publier [-Exe ...] [-Cle ...] [-Oui]                       (mainteneur) catalogue : construire, signer, publier
+  publier [-Oui]                                             (mainteneur) met le site en ligne (les add-ons se publient en les validant)
 
 Pour essayer un add-on : empaqueter, puis dans TrackChest : Add-on > Ajouter un fichier...
 Pour le proposer aux autres joueurs : https://trackchest-addons.pages.dev/poster.html (envoi du .zip, sans compte).
@@ -197,24 +197,22 @@ switch ($Commande.ToLowerInvariant()) {
         Write-Output "Essaie-le : TrackChest > Add-on > Ajouter un fichier... > $zip"
     }
     'publier' {
+        # Le catalogue est fabriqué et signé par le site à partir de GitHub : « publier » met seulement en ligne le SITE
+        # (pages et fonctions). Les add-ons, eux, sont publiés en fusionnant leur proposition (page d'administration).
         & (Join-Path $PSScriptRoot 'Validate-Addon.ps1')
         if ($LASTEXITCODE -ne 0) { throw 'Des add-ons sont invalides : corrige-les avant de publier.' }
-        $exePath = Find-Exe
-        if (-not $exePath) { throw 'TrackChest.exe est nécessaire pour signer : utilise -Exe chemin\TrackChest.exe' }
-        if (-not (Test-Path -LiteralPath $Cle)) { throw "Clé privée introuvable : $Cle (option -Cle)." }
+        # Sans ces deux secrets, le catalogue en ligne ne répondrait plus aux joueurs : on refuse de publier.
+        $secrets = (& npx.cmd --yes wrangler pages secret list --project-name $Projet 2>&1 | Out-String)
+        foreach ($secret in 'GITHUB_TOKEN', 'ADMIN_PASSWORD', 'SIGNING_KEY') {
+            if ($secrets -notmatch $secret) { throw "Le secret $secret n'est pas configuré sur Cloudflare : voir README.md, section « Administration »." }
+        }
         if (-not $Oui) {
-            $reponse = Read-Host "Publier le catalogue sur $BaseUrl (projet Cloudflare $Projet) ? (o/N)"
+            $reponse = Read-Host "Mettre en ligne le site sur $BaseUrl (projet Cloudflare $Projet) ? (o/N)"
             if ($reponse -notmatch '^(o|oui|y|yes)$') { Write-Output 'Annulé.'; exit 0 }
         }
-        & (Join-Path $PSScriptRoot 'Build-Index.ps1') -BaseUrl $BaseUrl
-        $sign = Invoke-Exe $exePath @('--addon-sign', (Join-Path $root 'site\index.json'), $Cle)
-        Write-Output $sign.Text
-        if ($sign.Code -ne 0) { exit 1 }
-        $verify = Invoke-Exe $exePath @('--addon-verify', (Join-Path $root 'site\index.json'), ($Cle -replace 'addon-private\.key$', 'addon-public.key'))
-        Write-Output $verify.Text
-        if ($verify.Code -ne 0) { exit 1 }
+        & (Join-Path $PSScriptRoot 'Build-Index.ps1')
         Push-Location $root
-        try { npx --yes wrangler pages deploy site --project-name $Projet --branch production }
+        try { & npx.cmd --yes wrangler pages deploy site --project-name $Projet --branch production }
         finally { Pop-Location }
     }
     default { Show-Help }

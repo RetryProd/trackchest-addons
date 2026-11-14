@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Administration · Add-ons TrackChest</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  .login { max-width: 420px; margin: 40px auto; }
+  .tabs { display: flex; gap: 8px; margin: 0 0 18px; flex-wrap: wrap; }
+  .proposal { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 18px; margin: 0 0 16px; }
+  .proposal h3 { margin: 0 0 4px; color: var(--text); font-size: 1.1rem; }
+  .proposal .sub { color: var(--muted); font-size: .88rem; margin: 0 0 10px; }
+  .checks-list { list-style: none; margin: 8px 0; padding: 0; font-size: .9rem; }
+  .checks-list li { padding: 2px 0; }
+  .checks-list .bad { color: var(--red); }
+  .checks-list .warn { color: var(--gold); }
+  .checks-list .good { color: #9be7b4; }
+  details { margin: 8px 0; }
+  summary { cursor: pointer; color: var(--soft); font-size: .9rem; }
+  details pre { max-height: 360px; overflow: auto; }
+  .row-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 12px; }
+  .row-actions label { display: flex; gap: 8px; align-items: center; color: var(--soft); font-size: .92rem; cursor: pointer; }
+  .btn.danger { border-color: rgba(255,138,138,.5); color: var(--red); }
+  table.catalog { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  table.catalog th, table.catalog td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--border); font-size: .92rem; vertical-align: middle; }
+  table.catalog th { color: var(--muted); font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; }
+  table.catalog tr:last-child td { border-bottom: 0; }
+  .who { color: var(--muted); font-size: .85rem; }
+</style>
+</head>
+<body>
+<main>
+  <header class="top">
+    <a class="brand" href="./">TrackChest <span>Administration</span></a>
+    <nav class="nav">
+      <a class="btn" href="./">Catalogue</a>
+      <button type="button" class="btn hidden" id="logout">Se déconnecter</button>
+    </nav>
+  </header>
+
+  <section id="login" class="login card">
+    <h1 style="font-size:1.5rem">Connexion</h1>
+    <p class="lead">Réservé au mainteneur du catalogue.</p>
+    <form id="loginForm" autocomplete="on">
+      <div class="field"><label for="password">Mot de passe</label><input type="password" id="password" autocomplete="current-password" required style="width:100%;background:var(--field);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:9px 11px;font:inherit"></div>
+      <div class="actions"><button type="submit" class="btn primary" id="loginButton">Se connecter</button></div>
+      <p class="errors" id="loginError" style="padding-left:0;list-style:none"></p>
+    </form>
+  </section>
+
+  <section id="panel" class="hidden">
+    <div class="tabs">
+      <button type="button" class="btn active" id="tabProposals">Propositions <span id="proposalCount"></span></button>
+      <button type="button" class="btn" id="tabCatalog">Catalogue publié</button>
+    </div>
+    <p class="ok" id="status"></p>
+
+    <div id="proposals"></div>
+
+    <div id="catalogBox" class="hidden">
+      <p class="lead">Les add-ons sont publiés dès qu'ils sont fusionnés : le catalogue est fabriqué et signé par le site à chaque demande (cache de 30 secondes). <strong>Révoquer</strong> désactive l'add-on chez les joueurs à leur prochaine ouverture du catalogue.</p>
+      <div id="catalog"></div>
+    </div>
+  </section>
+</main>
+
+<script type="module">
+  const $ = (id) => document.getElementById(id);
+  function el(tag, attrs = {}, children = []) {
+    const e = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) { if (k === 'text') e.textContent = v; else e.setAttribute(k, v); }
+    children.forEach((c) => e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c));
+    return e;
+  }
+
+  async function api(path, body) {
+    const response = await fetch(path, body ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) } : {});
+    const data = await response.json().catch(() => ({}));
+    if (response.status === 401 && path !== '/api/admin/login') { showLogin(); throw new Error('Session expirée : reconnecte-toi.'); }
+    if (!response.ok) { const error = new Error(data.error || 'Erreur.'); error.details = data.details; throw error; }
+    return data;
+  }
+
+  function showLogin() {
+    $('login').classList.remove('hidden');
+    $('panel').classList.add('hidden');
+    $('logout').classList.add('hidden');
+  }
+  function showPanel() {
+    $('login').classList.add('hidden');
+    $('panel').classList.remove('hidden');
+    $('logout').classList.remove('hidden');
+  }
+  function say(text, error = false) { $('status').textContent = text; $('status').className = 'ok' + (error ? '' : ''); $('status').style.color = error ? 'var(--red)' : ''; }
+
+  // ---- Propositions ------------------------------------------------------------------------------------------
+  function permissionText(p) {
+    return ({ 'stats.read': 'lire les statistiques', 'overlay.rows': 'ajouter des lignes', 'overlay.theme': 'changer les couleurs', 'overlay.script': 'SCRIPT (tout modifier)' })[p] || p;
+  }
+
+  function proposalCard(p) {
+    const m = p.manifest;
+    const title = m ? `${m.name} · ${m.version}` : p.title;
+    const kind = p.existing ? `Mise à jour (publié : ${p.existing.version})` : 'Nouvel add-on';
+    const items = [
+      ...p.errors.map((t) => el('li', { class: 'bad', text: '✗ ' + t })),
+      ...p.warnings.map((t) => el('li', { class: 'warn', text: '⚠ ' + t })),
+    ];
+    if (p.canApprove) items.unshift(el('li', { class: 'good', text: '✓ Les règles de TrackChest sont respectées.' }));
+    if (p.ci === 'success') items.push(el('li', { class: 'good', text: '✓ Le contrôle automatique GitHub est passé.' }));
+
+    const children = [
+      el('h3', { text: title }),
+      el('p', { class: 'sub', text: `${kind} · proposition n°${p.number} · ${new Date(p.createdAt).toLocaleString('fr-FR')}${p.fromSite ? ' · envoyée depuis le site' : ' · ' + p.author}` }),
+    ];
+    if (m) {
+      children.push(el('p', { text: m.description || 'Pas de description.' }));
+      children.push(el('p', { class: 'sub', text: 'Permissions : ' + (Array.isArray(m.permissions) ? m.permissions.map(permissionText).join(' · ') : '?') }));
+    }
+    children.push(el('ul', { class: 'checks-list' }, items));
+    if (p.manifestText) children.push(el('details', {}, [el('summary', { text: 'manifest.json' }), el('pre', {}, [el('code', { text: p.manifestText })])]));
+    if (p.script !== null && p.script !== undefined) children.push(el('details', { open: '' }, [el('summary', { text: 'script.js : à lire en entier' }), el('pre', {}, [el('code', { text: p.script })])]));
+    children.push(el('p', { class: 'who' }, [el('a', { href: p.url, target: '_blank', rel: 'noopener', text: 'Voir sur GitHub' })]));
+
+    const verified = el('input', { type: 'checkbox' });
+    const approve = el('button', { type: 'button', class: 'btn primary', text: 'Valider et publier' });
+    const reject = el('button', { type: 'button', class: 'btn danger', text: 'Refuser' });
+    approve.disabled = !p.canApprove;
+    approve.addEventListener('click', async () => {
+      const what = `« ${title} »${p.script !== null && p.script !== undefined ? ' (contient un script)' : ''}`;
+      if (!confirm(`Valider ${what} ?\nIl sera publié dans le catalogue tout de suite, pour tous les joueurs.`)) return;
+      approve.disabled = reject.disabled = true;
+      say('Validation en cours…');
+      try {
+        await api('/api/admin/proposals', { action: 'approve', number: p.number, sha: p.headSha, verified: verified.checked });
+        say(`✓ « ${title} » est publié dans le catalogue.`);
+        await loadProposals();
+      } catch (err) {
+        say(err.message + (err.details ? ' ' + err.details.join(' ') : ''), true);
+        approve.disabled = !p.canApprove; reject.disabled = false;
+      }
+    });
+    reject.addEventListener('click', async () => {
+      const reason = prompt(`Refuser « ${title} » ?\nMotif (facultatif, visible sur GitHub) :`, '');
+      if (reason === null) return;
+      approve.disabled = reject.disabled = true;
+      say('Refus en cours…');
+      try {
+        await api('/api/admin/proposals', { action: 'reject', number: p.number, reason });
+        say('Proposition refusée.');
+        await loadProposals();
+      } catch (err) { say(err.message, true); approve.disabled = !p.canApprove; reject.disabled = false; }
+    });
+    const actions = [];
+    if (p.canApprove) actions.push(el('label', {}, [verified, 'Marquer comme « Vérifié » (je l’ai relu en entier)']));
+    actions.push(approve, reject);
+    children.push(el('div', { class: 'row-actions' }, actions));
+    return el('article', { class: 'proposal' }, children);
+  }
+
+  async function loadProposals() {
+    const box = $('proposals');
+    try {
+      const { proposals } = await api('/api/admin/proposals');
+      box.textContent = '';
+      $('proposalCount').textContent = proposals.length ? `(${proposals.length})` : '';
+      if (proposals.length === 0) box.appendChild(el('p', { class: 'empty', text: 'Aucune proposition en attente.' }));
+      proposals.forEach((p) => box.appendChild(p.error ? el('p', { class: 'bad', text: p.error }) : proposalCard(p)));
+    } catch (err) { if (!$('panel').classList.contains('hidden')) say(err.message, true); }
+  }
+
+  // ---- Catalogue publié ----------------------------------------------------------------------------------------
+  async function change(action, id, label) {
+    say(label + '…');
+    try { await api('/api/admin/catalog', { action, id }); say('✓ Fait.'); await loadCatalog(); }
+    catch (err) { say(err.message, true); }
+  }
+
+  async function loadCatalog() {
+    const box = $('catalog');
+    try {
+      const data = await api('/api/admin/catalog');
+      box.textContent = '';
+      const head = el('tr', {}, ['Add-on', 'Version', 'Niveau', 'Permissions', ''].map((t) => el('th', { text: t })));
+      const rows = data.addons.map((a) => {
+        const verifyButton = el('button', { type: 'button', class: 'btn small', text: a.tier === 'verified' ? 'Retirer « Vérifié »' : 'Marquer « Vérifié »' });
+        verifyButton.addEventListener('click', () => change(a.tier === 'verified' ? 'unverify' : 'verify', a.id, 'Mise à jour'));
+        const revokeButton = el('button', { type: 'button', class: 'btn small' + (a.revoked ? '' : ' danger'), text: a.revoked ? 'Annuler la révocation' : 'Révoquer' });
+        revokeButton.addEventListener('click', () => {
+          if (!a.revoked && !confirm(`Révoquer « ${a.name} » ?\nIl sera désactivé chez les joueurs qui l'ont installé.`)) return;
+          change(a.revoked ? 'unrevoke' : 'revoke', a.id, 'Mise à jour');
+        });
+        return el('tr', {}, [
+          el('td', {}, [el('strong', { text: a.name }), el('div', { class: 'who', text: a.id })]),
+          el('td', { text: a.version }),
+          el('td', { text: a.revoked ? 'Révoqué' : a.tier === 'verified' ? '✓ Vérifié' : 'Communauté' }),
+          el('td', { class: 'who', text: a.permissions.map(permissionText).join(' · ') }),
+          el('td', {}, [el('div', { class: 'actions', style: 'margin:0' }, [verifyButton, revokeButton])]),
+        ]);
+      });
+      box.appendChild(el('table', { class: 'catalog' }, [el('thead', {}, [head]), el('tbody', {}, rows)]));
+      if (data.addons.length === 0) box.appendChild(el('p', { class: 'empty', text: 'Le catalogue est vide.' }));
+      if (data.invalid.length > 0) {
+        box.appendChild(el('h3', { text: 'Dossiers invalides (non publiés)' }));
+        box.appendChild(el('ul', { class: 'errors' }, data.invalid.map((i) => el('li', { text: `${i.id} : ${i.errors.join(' ')}` }))));
+      }
+    } catch (err) { say(err.message, true); }
+  }
+
+  function tab(name) {
+    $('proposals').classList.toggle('hidden', name !== 'proposals');
+    $('catalogBox').classList.toggle('hidden', name !== 'catalog');
+    $('tabProposals').classList.toggle('active', name === 'proposals');
+    $('tabCatalog').classList.toggle('active', name === 'catalog');
+    say('');
+    if (name === 'proposals') loadProposals(); else loadCatalog();
+  }
+  $('tabProposals').addEventListener('click', () => tab('proposals'));
+  $('tabCatalog').addEventListener('click', () => tab('catalog'));
+
+  // ---- Connexion -----------------------------------------------------------------------------------------------
+  $('loginForm').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    $('loginError').textContent = '';
+    $('loginButton').disabled = true;
+    try {
+      await api('/api/admin/login', { password: $('password').value });
+      $('password').value = '';
+      showPanel();
+      tab('proposals');
+    } catch (err) { $('loginError').textContent = err.message; }
+    $('loginButton').disabled = false;
+  });
+  $('logout').addEventListener('click', async () => { try { await api('/api/admin/logout', {}); } catch { /* déjà déconnecté */ } showLogin(); });
+
+  // Session déjà ouverte ? (le cookie est valable 8 heures)
+  try { await api('/api/admin/proposals'); showPanel(); tab('proposals'); } catch { showLogin(); }
+</script>
+</body>
+</html>
