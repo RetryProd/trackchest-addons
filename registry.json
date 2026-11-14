@@ -1,11 +1,16 @@
 {
-  "verified": [
-    "boost-weekend",
-    "stats-detail",
-    "theme-coffre-or"
-  ],
-  "revoked": [
-    "reveil-jeton-pirate",
-    "theme-nuit"
-  ]
+    "revoked":  [
+                    "reveil-jeton-pirate",
+                    "theme-nuit"
+                ],
+    "verified":  [
+                     "boost-weekend",
+                     "stats-detail",
+                     "theme-coffre-or"
+                 ],
+    "authors":  {
+                    "boost-weekend":  "Voyzix",
+                    "stats-detail":  "Voyzix",
+                    "theme-coffre-or":  "Voyzix"
+                }
 }
