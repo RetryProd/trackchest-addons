@@ -67,18 +67,6 @@ function fmtOdds(openedEff, lang) {
   return pct.toFixed(2).replace(".", dec) + " %";
 }
 
-function chanceOf(openedEff) {
-  return 1 - Math.pow(1 - 1 / DROP_DENOMINATOR, Math.max(0, openedEff));
-}
-
-// Points de pourcentage gagnes grace aux coffres boostes (ex. "0,12 %").
-function fmtGain(baseOpened, boostedOpened, lang) {
-  var gain = Math.max(0, (chanceOf(boostedOpened) - chanceOf(baseOpened)) * 100);
-  var dec = lang === "en" ? "." : ",";
-  if (gain > 0 && gain < 0.005) return "<0" + dec + "01 %";
-  return gain.toFixed(2).replace(".", dec) + " %";
-}
-
 function nextBoostStatus(now) {
   var active = boostForDate(now);
   var day = now.getDay();
@@ -163,7 +151,9 @@ function overlay(view, data) {
     if (row.icon === "Pirate_Token.png" || row.label === "Jeton pirate" || row.label === "Pirate token") {
       row.value = fmtOdds(finalTotalOpened, lang);
       if (status.active > 1) {
-        row.detail = DOT + " +" + fmtGain(baseTotalOpened, finalTotalOpened, lang) + " boost";
+        // Pendant un boost : chaque coffre ouvert compte avec le boost (2837 coffres en x1,5 = 4255,5).
+        row.value = fmtOdds(baseTotalOpened * status.active, lang);
+        row.detail = DOT + " boost " + status.value;
         row.color = status.color;
       }
     }
