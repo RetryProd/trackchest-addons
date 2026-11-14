@@ -150,6 +150,11 @@ function overlay(view, data) {
     if (row.separator) hasSeparator = true;
     if (row.icon === "Pirate_Token.png" || row.label === "Jeton pirate" || row.label === "Pirate token") {
       row.value = fmtOdds(finalTotalOpened, lang);
+      if (status.active > 1) {
+        var multTxt = "x" + String(status.active).replace(".", lang === "en" ? "." : ",");
+        row.detail = DOT + (lang === "en" ? " boosted " : " cumul boost ") + multTxt;
+        row.color = status.color;
+      }
     }
   }
 
